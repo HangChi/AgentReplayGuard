@@ -1,0 +1,33 @@
+"""退款 LangGraph 图：refund → notify 串行，refund 节点显式声明重试策略。"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any
+
+from langgraph.graph import StateGraph
+from langgraph.types import RetryPolicy
+
+
+def build_graph(
+    refund: Callable[..., Any],
+    notify: Callable[..., Any],
+    *,
+    retry_policy: RetryPolicy,
+):
+    builder = StateGraph(dict)
+
+    def do_refund(state: dict) -> dict:
+        refund(state["refund_id"], state["amount_cents"])
+        return dict(state)
+
+    def do_notify(state: dict) -> dict:
+        notify(state["refund_id"])
+        return dict(state)
+
+    builder.add_node("refund", do_refund, retry_policy=retry_policy)
+    builder.add_node("notify", do_notify)
+    builder.set_entry_point("refund")
+    builder.add_edge("refund", "notify")
+    builder.add_edge("notify", "__end__")
+    return builder.compile()

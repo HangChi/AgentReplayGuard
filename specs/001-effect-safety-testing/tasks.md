@@ -28,10 +28,10 @@ description: "Task list for AgentReplayGuard MVP implementation"
 
 **Purpose**: 项目骨架（pyproject.toml 由 Phase 3 初始化创建，此处为可运行骨架的验证）。
 
-- [ ] T001 创建 `src/agentreplayguard/__init__.py`（空导出占位）与 `src/agentreplayguard/py.typed`
-- [ ] T002 [P] 创建 `tests/unit/`、`tests/contract/`、`tests/integration/` 目录与空 `conftest.py` 骨架
-- [ ] T003 [P] 验证 `pip install -e ".[dev,langgraph]"` 成功且 `import agentreplayguard` 可用
-- [ ] T004 [P] 验证 `ruff check .`、`mypy src/agentreplayguard` 在空包上无错误
+- [X] T001 创建 `src/agentreplayguard/__init__.py`（空导出占位）与 `src/agentreplayguard/py.typed`
+- [X] T002 [P] 创建 `tests/unit/`、`tests/contract/`、`tests/integration/` 目录与空 `conftest.py` 骨架
+- [X] T003 [P] 验证 `pip install -e ".[dev,langgraph]"` 成功且 `import agentreplayguard` 可用
+- [X] T004 [P] 验证 `ruff check .`、`mypy src/agentreplayguard` 在空包上无错误
 
 ---
 
@@ -41,18 +41,18 @@ description: "Task list for AgentReplayGuard MVP implementation"
 
 **⚠️ CRITICAL**: 本阶段未完成前，US1–US6 均不得开始。
 
-- [ ] T005 [P] 编写异常体系测试 `tests/unit/test_errors.py`：`EffectSafetyError` 继承 `AssertionError`、`ScenarioConfigError`、`ScenarioStateError`、`UnsupportedGraphError`、`ServiceError(status=...)`、`PartialSuccessError`、`IdempotencyConflict`
-- [ ] T006 实现 `src/agentreplayguard/errors.py`
-- [ ] T007 [P] 编写时钟测试 `tests/unit/test_clock.py`：单调递增、场景内序号 ID（`eff-000001`、`run-0001`）、确定性
-- [ ] T008 实现 `src/agentreplayguard/clock.py`（`LogicalClock` + 确定性 ID 生成）
-- [ ] T009 [P] 编写 effect 存储测试 `tests/unit/test_effects.py`：`EffectStatus` 枚举、`EffectRecord` 只读、`EffectStore` 查询、`committed_count` 去重口径（有幂等键相同哈希只计 1 次、无幂等键每条计 1 次）
-- [ ] T010 实现 `src/agentreplayguard/effects.py`（`EffectStatus`、`EffectRecord`、`EffectStore`、`EffectView`）
-- [ ] T011 [P] 编写故障模型测试 `tests/unit/test_faults.py`：规则顺序匹配、`times` 耗尽后继续、选择器校验、`probability` 与 seed 确定性
-- [ ] T012 实现 `src/agentreplayguard/faults.py`（`FaultKind`、`FaultRule`、`FaultPlan`）
-- [ ] T013 [P] 编写不变量测试 `tests/unit/test_invariants.py`：`NoDuplicateEffects`（去重口径、`parameter_mismatch`）、`MaxEffectCount`、`CustomInvariant`（predicate 抛异常视为违规）、`Violation` 排序
-- [ ] T014 实现 `src/agentreplayguard/invariants.py`（`Invariant` 协议、三个内置不变量、`Violation`）
-- [ ] T015 [P] 编写报告测试 `tests/unit/test_report.py`：`RunSegment`/`RunInputKind`/`GraphRun`、`ScenarioReport.ok`、`format()` 确定性（无 wall clock/绝对路径/内存地址）、`assert_clean()` 抛 `EffectSafetyError`
-- [ ] T016 实现 `src/agentreplayguard/report.py`（`RunInputKind`、`RunSegment`、`GraphRun`、`ScenarioReport`）
+- [X] T005 [P] 编写异常体系测试 `tests/unit/test_errors.py`：`EffectSafetyError` 继承 `AssertionError`、`ScenarioConfigError`、`ScenarioStateError`、`UnsupportedGraphError`、`ServiceError(status=...)`、`PartialSuccessError`、`IdempotencyConflict`
+- [X] T006 实现 `src/agentreplayguard/errors.py`
+- [X] T007 [P] 编写时钟测试 `tests/unit/test_clock.py`：单调递增、场景内序号 ID（`eff-000001`、`run-0001`）、确定性
+- [X] T008 实现 `src/agentreplayguard/clock.py`（`LogicalClock` + 确定性 ID 生成）
+- [X] T009 [P] 编写 effect 存储测试 `tests/unit/test_effects.py`：`EffectStatus` 枚举、`EffectRecord` 只读、`EffectStore` 查询、`committed_count` 去重口径（有幂等键相同哈希只计 1 次、无幂等键每条计 1 次）
+- [X] T010 实现 `src/agentreplayguard/effects.py`（`EffectStatus`、`EffectRecord`、`EffectStore`、`EffectView`）
+- [X] T011 [P] 编写故障模型测试 `tests/unit/test_faults.py`：规则顺序匹配、`times` 耗尽后继续、选择器校验、`probability` 与 seed 确定性
+- [X] T012 实现 `src/agentreplayguard/faults.py`（`FaultKind`、`FaultRule`、`FaultPlan`）
+- [X] T013 [P] 编写不变量测试 `tests/unit/test_invariants.py`：`NoDuplicateEffects`（去重口径、`parameter_mismatch`）、`MaxEffectCount`、`CustomInvariant`（predicate 抛异常视为违规）、`Violation` 排序
+- [X] T014 实现 `src/agentreplayguard/invariants.py`（`Invariant` 协议、三个内置不变量、`Violation`）
+- [X] T015 [P] 编写报告测试 `tests/unit/test_report.py`：`RunSegment`/`RunInputKind`/`GraphRun`、`ScenarioReport.ok`、`format()` 确定性（无 wall clock/绝对路径/内存地址）、`assert_clean()` 抛 `EffectSafetyError`
+- [X] T016 实现 `src/agentreplayguard/report.py`（`RunInputKind`、`RunSegment`、`GraphRun`、`ScenarioReport`）
 
 **Checkpoint**: 基础就绪，用户故事可开始。
 
@@ -66,18 +66,18 @@ description: "Task list for AgentReplayGuard MVP implementation"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T017 [P] [US1] 契约测试 `tests/contract/test_public_api.py`：公开导入面、`Scenario` 构造与生命周期、`EffectGuard.effect` 签名保留
-- [ ] T018 [P] [US1] guard 单元测试 `tests/unit/test_guard.py`：参数绑定、key 提取、params 排除 key/idempotency_key、参数哈希、attempt 累计、提交前/后故障语义、异常透传
-- [ ] T019 [P] [US1] 场景测试 `tests/unit/test_scenario.py`：装配、RUNNING 状态、FINISHED 后禁止使用、`finish()` 幂等
+- [X] T017 [P] [US1] 契约测试 `tests/contract/test_public_api.py`：公开导入面、`Scenario` 构造与生命周期、`EffectGuard.effect` 签名保留
+- [X] T018 [P] [US1] guard 单元测试 `tests/unit/test_guard.py`：参数绑定、key 提取、params 排除 key/idempotency_key、参数哈希、attempt 累计、提交前/后故障语义、异常透传
+- [X] T019 [P] [US1] 场景测试 `tests/unit/test_scenario.py`：装配、RUNNING 状态、FINISHED 后禁止使用、`finish()` 幂等
 
 ### Implementation for User Story 1
 
-- [ ] T020 [P] [US1] 实现 `src/agentreplayguard/guard.py`（`EffectGuard`：`effect` 装饰器 + `call`，哈希、attempt、故障接线）
-- [ ] T021 [US1] 实现 `src/agentreplayguard/scenario.py`（`Scenario`：装配 store/clock/injector/invariants，生命周期）
-- [ ] T022 [P] [US1] 实现 `src/agentreplayguard/services/refund.py`（`SimulatedRefundService`、`Refund`、`IdempotencyConflict`）及测试 `tests/unit/test_refund.py`
-- [ ] T023 [US1] 实现 `src/agentreplayguard/__init__.py` 公开导出面（对齐 contracts/public-api.md）
-- [ ] T024 [US1] 编写退款示例 `examples/refund/tools.py`（退款/通知工具，用 guard 包裹）、`examples/refund/graph.py`（串行图，显式 `retry_on=(TimeoutError, ConnectionError, ServiceError)`、`initial_interval=0`、`jitter=False`）、`examples/refund/conftest.py`（`refund_scenario` fixture）
-- [ ] T025 [US1] 编写 `examples/refund/test_refund_lost_ack.py`：`test_duplicate_is_detected`（ok=False，2 条 committed）与 `test_lost_ack_demo_fails`（xfail，`assert_clean()` 抛 `EffectSafetyError`）
+- [X] T020 [P] [US1] 实现 `src/agentreplayguard/guard.py`（`EffectGuard`：`effect` 装饰器 + `call`，哈希、attempt、故障接线）
+- [X] T021 [US1] 实现 `src/agentreplayguard/scenario.py`（`Scenario`：装配 store/clock/injector/invariants，生命周期）
+- [X] T022 [P] [US1] 实现 `src/agentreplayguard/services/refund.py`（`SimulatedRefundService`、`Refund`、`IdempotencyConflict`）及测试 `tests/unit/test_refund.py`
+- [X] T023 [US1] 实现 `src/agentreplayguard/__init__.py` 公开导出面（对齐 contracts/public-api.md）
+- [X] T024 [US1] 编写退款示例 `examples/refund/tools.py`（退款/通知工具，用 guard 包裹）、`examples/refund/graph.py`（串行图，显式 `retry_on=(TimeoutError, ConnectionError, ServiceError)`、`initial_interval=0`、`jitter=False`）、`examples/refund/conftest.py`（`refund_scenario` fixture）
+- [X] T025 [US1] 编写 `examples/refund/test_refund_lost_ack.py`：`test_duplicate_is_detected`（ok=False，2 条 committed）与 `test_lost_ack_demo_fails`（xfail，`assert_clean()` 抛 `EffectSafetyError`）
 
 **Checkpoint**: US1 完整可独立验证。
 

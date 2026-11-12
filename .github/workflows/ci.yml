@@ -41,7 +41,15 @@ jobs:
       - name: Install
         run: uv sync --extra dev --extra langgraph
       - name: Test with network blocked
-        # 阻断外部网络，验证无真实外部请求；依赖安装已在上一步完成。
-        run: |
-          sudo ip link set lo down || true
-          uv run pytest tests/integration/test_determinism_and_offline.py -q
+        # 用不可达代理阻断外部请求，但保留 loopback：关闭 lo 会让 GitHub Actions
+        # runner 无法回传任务结果，导致 job 永久停在 in_progress。
+        # 依赖安装已在上一步完成，测试内部另有 socket 级断网断言。
+        env:
+          HTTP_PROXY: http://127.0.0.1:9
+          HTTPS_PROXY: http://127.0.0.1:9
+          ALL_PROXY: http://127.0.0.1:9
+          http_proxy: http://127.0.0.1:9
+          https_proxy: http://127.0.0.1:9
+          all_proxy: http://127.0.0.1:9
+          NO_PROXY: ""
+        run: uv run pytest tests/integration/test_determinism_and_offline.py -q

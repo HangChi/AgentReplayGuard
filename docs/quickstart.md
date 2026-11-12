@@ -7,7 +7,7 @@ effect 账本，验证重试、Checkpoint 恢复与 Interrupt 重放不会重复
 ## 安装
 
 ```bash
-pip install -e ".[dev,langgraph]"
+uv sync --extra dev --extra langgraph
 ```
 
 - 核心包仅依赖标准库；`langgraph` 是可选适配层依赖。
@@ -86,7 +86,7 @@ def test_something(replayguard):
 `examples/refund/` 包含完整示例（lost-ack、幂等键、Checkpoint 恢复、Interrupt 重放）：
 
 ```bash
-pytest examples/refund -q
+uv run pytest examples/refund -q
 ```
 
 ## 更多

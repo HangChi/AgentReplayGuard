@@ -11,8 +11,7 @@
 ## 环境准备
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,langgraph]"
+uv sync --extra dev --extra langgraph
 ```
 
 ## 质量闸门
@@ -20,9 +19,10 @@ pip install -e ".[dev,langgraph]"
 合并前必须全部通过：
 
 ```bash
-ruff check .
-mypy src/agentreplayguard
-pytest --cov=agentreplayguard --cov-report=term-missing
+uv run ruff check .
+uv run mypy src/agentreplayguard
+uv run coverage run -m pytest
+uv run coverage report --fail-under=90
 ```
 
 核心模块（Effect Store、Fault Injector、Invariant Checker、LangGraph Adapter）行覆盖率

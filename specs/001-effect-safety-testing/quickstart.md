@@ -14,9 +14,7 @@
 ## 安装
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev,langgraph]"
+uv sync --extra dev --extra langgraph
 ```
 
 ## 运行全部示例
@@ -52,13 +50,12 @@ pytest examples/refund/test_refund_lost_ack.py::test_lost_ack_demo_fails -q --ru
 报告应包含：
 
 ```text
-scenario=refund-lost-ack seed=7
-[eff-000001] refund order-42 attempt=1 status=committed fault=timeout_after_commit
-             run=run-0001 thread=thread-0001 checkpoint=<id>
-[eff-000002] refund order-42 attempt=2 status=committed fault=None
-             run=run-0001 thread=thread-0001 checkpoint=<id>
-VIOLATION no_duplicate_effects: expected 1 committed refund, actual 2
-          business_key=order-42 effect_ids=(eff-000001, eff-000002)
+Scenario: refund-lost-ack (seed=7)
+[eff-000001] refund key=order-42 attempt=1 status=committed fault=timeout_after_commit run=- thread=- checkpoint=-
+[eff-000002] refund key=order-42 attempt=2 status=committed fault=- run=- thread=- checkpoint=-
+[eff-000003] notify key=order-42 attempt=1 status=committed fault=- run=- thread=- checkpoint=-
+violations:
+  [no_duplicate_effects:refund] duplicate_effects: refund order-42 committed 2 times (expected=1, actual=2, effects=['eff-000001', 'eff-000002'])
 ```
 
 ### 2. 加幂等键：测试通过
@@ -152,7 +149,7 @@ def test_lost_ack_detects_duplicate(replayguard, refund_scenario):
 
 | 现象 | 原因 | 处理 |
 |------|------|------|
-| `ImportError: langgraph` | 未安装 optional extra | `pip install -e ".[langgraph]"` |
+| `ImportError: langgraph` | 未安装 optional extra | `uv sync --extra langgraph` |
 | 测试意外通过、没有重试 | 默认 `RetryPolicy` 不重试 `OSError` | 显式配置 `retry_on=(TimeoutError, ConnectionError, ...)` |
 | 测试很慢 | 默认 backoff/jitter | `initial_interval=0`、`jitter=False` |
 | `UnsupportedGraphError` | 并行 fan-out、无 checkpointer 或 graph API 不符 | 改为串行图；恢复场景加 `InMemorySaver` |

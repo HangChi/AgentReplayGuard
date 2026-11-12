@@ -29,8 +29,8 @@ AI Agent 调用有副作用的工具时，失败语义与普通函数不同：
 ## 快速开始
 
 ```bash
-pip install -e ".[dev,langgraph]"
-pytest examples/refund -q
+uv sync --extra dev --extra langgraph
+uv run pytest examples/refund -q
 ```
 
 用户接入说明见 [docs/quickstart.md](docs/quickstart.md)，完整验收步骤见

@@ -91,9 +91,6 @@ class FaultPlan:
     def rules(self) -> tuple[FaultRule, ...]:
         return self._rules
 
-    def __bool__(self) -> bool:
-        return bool(self._rules)
-
 
 @dataclass(frozen=True)
 class FaultDirective:

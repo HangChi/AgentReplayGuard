@@ -34,3 +34,9 @@ htmlcov/
 
 # Tooling
 *.log
+
+# Screenshots / browser artifacts
+.screenshots/
+
+# Trae local config (may contain credentials)
+.trae/mcp.json

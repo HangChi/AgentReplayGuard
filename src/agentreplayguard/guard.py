@@ -103,79 +103,60 @@ class EffectGuard:
 
         started_tick = self._clock.tick()
 
-        if directive is not None and is_before_commit(directive.kind):
-            exc = fault_exception(directive.kind)
+        def record(
+            status: EffectStatus,
+            *,
+            fault: FaultKind | None = None,
+            error_type: str | None = None,
+            error_message: str | None = None,
+        ) -> None:
             self._record(
                 effect_type=effect_type,
                 business_key=business_key,
                 params_hash=params_hash,
                 idempotency_key_hash=idempotency_key_hash,
                 attempt=attempt,
-                status=EffectStatus.NOT_COMMITTED,
-                fault=directive.kind,
-                error_type=type(exc).__name__,
-                error_message=_truncate(str(exc)),
+                status=status,
+                fault=fault,
+                error_type=error_type,
+                error_message=error_message,
                 run_id=run_id,
                 thread_id=thread_id,
                 checkpoint_id=checkpoint_id,
                 started_tick=started_tick,
+            )
+
+        if directive is not None and is_before_commit(directive.kind):
+            exc = fault_exception(directive.kind)
+            record(
+                EffectStatus.NOT_COMMITTED,
+                fault=directive.kind,
+                error_type=type(exc).__name__,
+                error_message=_truncate(str(exc)),
             )
             raise exc
 
         try:
             result = fn(*args, **kwargs)
         except Exception as exc:
-            self._record(
-                effect_type=effect_type,
-                business_key=business_key,
-                params_hash=params_hash,
-                idempotency_key_hash=idempotency_key_hash,
-                attempt=attempt,
-                status=EffectStatus.NOT_COMMITTED,
-                fault=None,
+            record(
+                EffectStatus.NOT_COMMITTED,
                 error_type=type(exc).__name__,
                 error_message=_truncate(str(exc)),
-                run_id=run_id,
-                thread_id=thread_id,
-                checkpoint_id=checkpoint_id,
-                started_tick=started_tick,
             )
             raise
 
         if directive is not None and not is_before_commit(directive.kind):
             fault_exc = fault_exception(directive.kind)
-            self._record(
-                effect_type=effect_type,
-                business_key=business_key,
-                params_hash=params_hash,
-                idempotency_key_hash=idempotency_key_hash,
-                attempt=attempt,
-                status=EffectStatus.COMMITTED,
+            record(
+                EffectStatus.COMMITTED,
                 fault=directive.kind,
                 error_type=type(fault_exc).__name__,
                 error_message=_truncate(str(fault_exc)),
-                run_id=run_id,
-                thread_id=thread_id,
-                checkpoint_id=checkpoint_id,
-                started_tick=started_tick,
             )
             raise fault_exc
 
-        self._record(
-            effect_type=effect_type,
-            business_key=business_key,
-            params_hash=params_hash,
-            idempotency_key_hash=idempotency_key_hash,
-            attempt=attempt,
-            status=EffectStatus.COMMITTED,
-            fault=None,
-            error_type=None,
-            error_message=None,
-            run_id=run_id,
-            thread_id=thread_id,
-            checkpoint_id=checkpoint_id,
-            started_tick=started_tick,
-        )
+        record(EffectStatus.COMMITTED)
         return result
 
     def _resolve_key(

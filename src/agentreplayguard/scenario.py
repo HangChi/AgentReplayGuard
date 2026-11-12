@@ -84,8 +84,6 @@ class Scenario:
     def finish(self) -> ScenarioReport:
         if self._report is not None:
             return self._report
-        if self._state is ScenarioState.CREATED:
-            self._state = ScenarioState.RUNNING
         self._state = ScenarioState.FINISHED
 
         violations: list[Violation] = []

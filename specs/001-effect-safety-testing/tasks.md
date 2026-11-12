@@ -167,12 +167,12 @@ description: "Task list for AgentReplayGuard MVP implementation"
 
 ### Tests for User Story 6 ⚠️
 
-- [ ] T038 [P] [US6] 集成测试 `tests/integration/test_determinism_and_offline.py`：同 seed 20 次一致、不同 seed 行为、断网运行、无真实 sleep
+- [X] T038 [P] [US6] 集成测试 `tests/integration/test_determinism_and_offline.py`：同 seed 20 次一致、不同 seed 行为、断网运行、无真实 sleep
 
 ### Implementation for User Story 6
 
-- [ ] T039 [US6] 实现 pytest 插件 `src/agentreplayguard/pytest_plugin.py`（`replayguard` fixture，pytest11 entry point）及契约测试 `tests/contract/test_pytest_plugin.py`
-- [ ] T040 [P] [US6] 确认 `pyproject.toml` 中 `[project.entry-points.pytest11]` 与 `[project.optional-dependencies]` 正确（langgraph extra）
+- [X] T039 [US6] 实现 pytest 插件 `src/agentreplayguard/pytest_plugin.py`（`replayguard` fixture，pytest11 entry point）及契约测试 `tests/contract/test_pytest_plugin.py`
+- [X] T040 [P] [US6] 确认 `pyproject.toml` 中 `[project.entry-points.pytest11]` 与 `[project.optional-dependencies]` 正确（langgraph extra）
 
 **Checkpoint**: US1–US6 全部独立验证。
 

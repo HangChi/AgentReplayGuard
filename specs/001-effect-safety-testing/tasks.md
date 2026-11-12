@@ -130,12 +130,12 @@ description: "Task list for AgentReplayGuard MVP implementation"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T033 [P] [US4] 集成测试 `tests/integration/test_langgraph_interrupt.py`：interrupt 前有 effect 恢复后重复、interrupt 后有 effect 恢复后不重复、`resume_interrupt` 需前次 INTERRUPTED 否则抛 `ScenarioConfigError`
+- [X] T033 [P] [US4] 集成测试 `tests/integration/test_langgraph_interrupt.py`：interrupt 前有 effect 恢复后重复、interrupt 后有 effect 恢复后不重复、`resume_interrupt` 需前次 INTERRUPTED 否则抛 `ScenarioConfigError`
 
 ### Implementation for User Story 4
 
-- [ ] T034 [US4] 在 `src/agentreplayguard/adapters/langgraph.py` 补充 `resume_interrupt`（`Command(resume=...)`）与 `interrupts` 提取
-- [ ] T035 [US4] 编写 `examples/refund/test_refund_interrupt.py`：两个场景（effect 在 interrupt 前/后）
+- [X] T034 [US4] 在 `src/agentreplayguard/adapters/langgraph.py` 补充 `resume_interrupt`（`Command(resume=...)`）与 `interrupts` 提取
+- [X] T035 [US4] 编写 `examples/refund/test_refund_interrupt.py`：两个场景（effect 在 interrupt 前/后）
 
 **Checkpoint**: US1–US4 均可独立验证。
 

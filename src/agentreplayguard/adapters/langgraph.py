@@ -8,6 +8,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, cast
 
+from langgraph.types import Command
+
 from ..errors import ScenarioConfigError, UnsupportedGraphError
 from ..report import GraphRun, RunInputKind, RunSegment
 from ..scenario import Scenario
@@ -46,6 +48,14 @@ class LangGraphAdapter:
             raise ScenarioConfigError("resume requires a prior run")
         self._check_checkpointer()
         return self._run(RunInputKind.RESUME, input)
+
+    def resume_interrupt(self, value: Any = None) -> GraphRun:
+        if self._last_segment is None or not self._last_segment.interrupted:
+            raise ScenarioConfigError(
+                "resume_interrupt requires a prior interrupted run"
+            )
+        self._check_checkpointer()
+        return self._run(RunInputKind.INTERRUPT_RESUME, Command(resume=value))
 
     def state(self) -> Any:
         return self._graph.get_state(self._config())
@@ -93,7 +103,7 @@ class LangGraphAdapter:
     def _run(
         self,
         input_kind: RunInputKind,
-        input: Mapping[str, Any] | None,
+        input: Any,
     ) -> GraphRun:
         checkpoint_before = self._checkpoint_id()
         run_id = self._scenario._begin_run(self._thread_id, checkpoint_before)

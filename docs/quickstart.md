@@ -72,6 +72,36 @@ assert not report.ok
 print(report.format())
 ```
 
+## 异步工具与异步图
+
+`effect` 会自动识别 `async def` 工具，记账与故障注入语义和同步路径一致：
+
+```python
+@scenario.guard().effect("refund", key="refund_id")
+async def refund(refund_id: str, amount_cents: int) -> str:
+    ...
+
+import asyncio
+
+asyncio.run(refund("order-42", 1000))
+```
+
+动态调用时可使用 `await scenario.guard().acall("refund", refund, refund_id="order-42", key="refund_id")`。
+异步图使用 `ainvoke` / `aresume` / `aresume_interrupt`：
+
+```python
+adapter = LangGraphAdapter(scenario, async_graph)
+asyncio.run(adapter.ainvoke({"refund_id": "order-42", "amount_cents": 1000}))
+asyncio.run(adapter.aresume())
+```
+
+注意：
+
+- 同步 `guard.call(...)` 执行 `async def` 工具会立即抛 `ScenarioConfigError`，请改用
+  `acall` 或直接 `await` 被装饰的工具。
+- 直接调用异步工具但忘记 `await` 属于 Python 协程语义，工具无法拦截，请确保在异步
+  上下文中等待。
+
 ## pytest fixture
 
 安装后插件自动注册 `replayguard` fixture，等价于 `Scenario` 构造器：

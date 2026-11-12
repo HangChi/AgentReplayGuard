@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import inspect
+
 from agentreplayguard import (
     CustomInvariant,
     EffectGuard,
@@ -83,3 +86,25 @@ def test_guard_effect_signature_preserved():
 
     assert refund("R-1") == "R-1"
     assert refund.__name__ == "refund"
+
+
+def test_guard_acall_signature():
+    scenario = Scenario("s")
+    guard = scenario.guard()
+
+    assert hasattr(guard, "acall")
+    parameters = inspect.signature(guard.acall).parameters
+    for name in ("effect_type", "fn", "key", "params", "idempotency_key"):
+        assert name in parameters
+
+
+def test_guard_effect_supports_async_callable():
+    scenario = Scenario("s")
+
+    @scenario.guard().effect("refund", key="refund_id")
+    async def refund(refund_id: str) -> str:
+        return refund_id
+
+    assert inspect.iscoroutinefunction(refund)
+    assert asyncio.run(refund("R-1")) == "R-1"
+    assert len(scenario.effects.records) == 1

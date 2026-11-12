@@ -28,8 +28,8 @@ description: "Task list for AgentReplayGuard 002 异步副作用安全测试"
 
 **Purpose**: 确认基线与工作分支（无新建工程骨架）。
 
-- [ ] T001 确认当前分支为 `002-async-execution-support` 且 `specs/002-async-execution-support/` 设计文档齐全
-- [ ] T002 运行 `uv run pytest -q` 与 `uv run ruff check .`，记录同步基线全绿（作为异步改造的回归基线）
+- [x] T001 确认当前分支为 `002-async-execution-support` 且 `specs/002-async-execution-support/` 设计文档齐全
+- [x] T002 运行 `uv run pytest -q` 与 `uv run ruff check .`，记录同步基线全绿（作为异步改造的回归基线）
 
 ---
 
@@ -39,8 +39,8 @@ description: "Task list for AgentReplayGuard 002 异步副作用安全测试"
 
 **⚠️ CRITICAL**: 本阶段完成后才能开始异步用户故事。
 
-- [ ] T003 在 `src/agentreplayguard/guard.py` 中抽出私有尝试上下文（参数绑定、业务键/参数哈希、attempt 分配、故障指令、run 上下文、记录写入），同步 `call` 改为使用该辅助结构，行为不变
-- [ ] T004 运行现有 `tests/unit/test_guard.py`、`tests/unit/test_scenario.py`、`tests/contract/test_public_api.py`，确认重构无回归
+- [x] T003 在 `src/agentreplayguard/guard.py` 中抽出私有尝试上下文（参数绑定、业务键/参数哈希、attempt 分配、故障指令、run 上下文、记录写入），同步 `call` 改为使用该辅助结构，行为不变
+- [x] T004 运行现有 `tests/unit/test_guard.py`、`tests/unit/test_scenario.py`、`tests/contract/test_public_api.py`，确认重构无回归
 
 **Checkpoint**: 共享记账辅助就绪，同步路径全绿。
 
@@ -54,14 +54,14 @@ description: "Task list for AgentReplayGuard 002 异步副作用安全测试"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T005 [P] [US1] 编写 `tests/unit/test_guard_async.py`：异步正常提交（1 条 committed、返回真实值）、异步 lost-ack（2 条 committed、attempt 1/2、业务键与参数哈希一致）、提交前故障（不执行函数且 not_committed）、业务异常（not_committed 且原样传播）、取消（unknown 且传播 `CancelledError`）
-- [ ] T006 [P] [US1] 扩展 `tests/contract/test_public_api.py`：`EffectGuard.acall` 存在且签名包含 `key`、`params`、`idempotency_key`；`effect` 装饰异步函数返回可 await 的 wrapper
+- [x] T005 [P] [US1] 编写 `tests/unit/test_guard_async.py`：异步正常提交（1 条 committed、返回真实值）、异步 lost-ack（2 条 committed、attempt 1/2、业务键与参数哈希一致）、提交前故障（不执行函数且 not_committed）、业务异常（not_committed 且原样传播）、取消（unknown 且传播 `CancelledError`）
+- [x] T006 [P] [US1] 扩展 `tests/contract/test_public_api.py`：`EffectGuard.acall` 存在且签名包含 `key`、`params`、`idempotency_key`；`effect` 装饰异步函数返回可 await 的 wrapper
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] 在 `src/agentreplayguard/guard.py` 中实现 `inspect.iscoroutinefunction` 自动识别与异步 wrapper，新增 `async def acall(...)`，复用 T003 的共享记账辅助，取消记录 `EffectStatus.UNKNOWN`
-- [ ] T008 [P] [US1] 新增 `examples/refund/tools_async.py`：异步退款与异步通知工具，使用 `@scenario.guard().effect(...)` 声明业务键与幂等键
-- [ ] T009 [US1] 新增 `examples/refund/test_refund_async.py`：异步 lost-ack 检测重复退款、异步幂等键场景通过，使用 `asyncio.run` 驱动
+- [x] T007 [US1] 在 `src/agentreplayguard/guard.py` 中实现 `inspect.iscoroutinefunction` 自动识别与异步 wrapper，新增 `async def acall(...)`，复用 T003 的共享记账辅助，取消记录 `EffectStatus.UNKNOWN`
+- [x] T008 [P] [US1] 新增 `examples/refund/tools_async.py`：异步退款与异步通知工具，使用 `@scenario.guard().effect(...)` 声明业务键与幂等键
+- [x] T009 [US1] 新增 `examples/refund/test_refund_async.py`：异步 lost-ack 检测重复退款、异步幂等键场景通过，使用 `asyncio.run` 驱动
 
 **Checkpoint**: US1 可独立验证（异步记账与故障注入）。
 
@@ -75,14 +75,14 @@ description: "Task list for AgentReplayGuard 002 异步副作用安全测试"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T010 [P] [US2] 编写 `tests/unit/test_adapter_async.py`：用假 graph stub 验证 `ainvoke` 调用 `graph.ainvoke`、记录 run 片段、缺少 `ainvoke` 抛 `UnsupportedGraphError`
-- [ ] T011 [P] [US2] 编写 `tests/integration/test_langgraph_async.py`：含异步节点的图首次执行为 COMMITTED；异步 lost-ack 重试后产生 2 条 committed；同步与异步等价场景的 effect 数量、状态序列与 attempt 一致
+- [x] T010 [P] [US2] 编写 `tests/unit/test_adapter_async.py`：用假 graph stub 验证 `ainvoke` 调用 `graph.ainvoke`、记录 run 片段、缺少 `ainvoke` 抛 `UnsupportedGraphError`
+- [x] T011 [P] [US2] 编写 `tests/integration/test_langgraph_async.py`：含异步节点的图首次执行为 COMMITTED；异步 lost-ack 重试后产生 2 条 committed；同步与异步等价场景的 effect 数量、状态序列与 attempt 一致
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] 在 `src/agentreplayguard/adapters/langgraph.py` 中抽出共享 run 片段构建逻辑，实现 `async def ainvoke(...)`（延迟校验 `ainvoke` 能力）
-- [ ] T013 [P] [US2] 新增 `examples/refund/graph_async.py`：异步节点图（含 `retry_policy`、`initial_interval=0`、`jitter=False`）
-- [ ] T014 [US2] 在 `examples/refund/test_refund_async.py` 中补充基于异步图的 lost-ack 用例，并断言异步与同步报告结论一致
+- [x] T012 [US2] 在 `src/agentreplayguard/adapters/langgraph.py` 中抽出共享 run 片段构建逻辑，实现 `async def ainvoke(...)`（延迟校验 `ainvoke` 能力）
+- [x] T013 [P] [US2] 新增 `examples/refund/graph_async.py`：异步节点图（含 `retry_policy`、`initial_interval=0`、`jitter=False`）
+- [x] T014 [US2] 在 `examples/refund/test_refund_async.py` 中补充基于异步图的 lost-ack 用例，并断言异步与同步报告结论一致
 
 **Checkpoint**: US1 + US2 可独立验证。
 
@@ -96,13 +96,13 @@ description: "Task list for AgentReplayGuard 002 异步副作用安全测试"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T015 [P] [US3] 编写 `tests/integration/test_langgraph_async_resume.py`：effect 在 checkpoint 后恢复不新增、effect 在 checkpoint 前恢复新增并被检测；interrupt 前有 effect 恢复后重复、interrupt 后有 effect 恢复后不重复；`aresume_interrupt` 无前次中断抛 `ScenarioConfigError`
-- [ ] T016 [P] [US3] 扩展 `tests/unit/test_adapter_async.py`：`aresume` 无前次 run 抛 `ScenarioConfigError`、无 checkpointer 抛 `UnsupportedGraphError`
+- [x] T015 [P] [US3] 编写 `tests/integration/test_langgraph_async_resume.py`：effect 在 checkpoint 后恢复不新增、effect 在 checkpoint 前恢复新增并被检测；interrupt 前有 effect 恢复后重复、interrupt 后有 effect 恢复后不重复；`aresume_interrupt` 无前次中断抛 `ScenarioConfigError`
+- [x] T016 [P] [US3] 扩展 `tests/unit/test_adapter_async.py`：`aresume` 无前次 run 抛 `ScenarioConfigError`、无 checkpointer 抛 `UnsupportedGraphError`
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] 在 `src/agentreplayguard/adapters/langgraph.py` 中实现 `async def aresume(...)` 与 `async def aresume_interrupt(...)`，复用同步入口的前置条件与 run 片段逻辑
-- [ ] T018 [P] [US3] 新增 `examples/refund/test_refund_async_resume.py`：异步 checkpoint 恢复与 interrupt 重放两个场景
+- [x] T017 [US3] 在 `src/agentreplayguard/adapters/langgraph.py` 中实现 `async def aresume(...)` 与 `async def aresume_interrupt(...)`，复用同步入口的前置条件与 run 片段逻辑
+- [x] T018 [P] [US3] 新增 `examples/refund/test_refund_async_resume.py`：异步 checkpoint 恢复与 interrupt 重放两个场景
 
 **Checkpoint**: US1–US3 均可独立验证。
 
@@ -116,11 +116,11 @@ description: "Task list for AgentReplayGuard 002 异步副作用安全测试"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T019 [P] [US4] 编写 `tests/unit/test_guard_async_misuse.py`：`call` 传入 `async def` 抛 `ScenarioConfigError`、错误信息含 `acall`/await 提示、账本 `records` 为空且 attempt 未累计；`acall` 传入同步函数正常执行
+- [x] T019 [P] [US4] 编写 `tests/unit/test_guard_async_misuse.py`：`call` 传入 `async def` 抛 `ScenarioConfigError`、错误信息含 `acall`/await 提示、账本 `records` 为空且 attempt 未累计；`acall` 传入同步函数正常执行
 
 ### Implementation for User Story 4
 
-- [ ] T020 [US4] 在 `src/agentreplayguard/guard.py` 的 `call` 入口增加异步函数检测与可操作错误信息（在任何参数解析与记录写入之前）
+- [x] T020 [US4] 在 `src/agentreplayguard/guard.py` 的 `call` 入口增加异步函数检测与可操作错误信息（在任何参数解析与记录写入之前）
 
 **Checkpoint**: US1–US4 均可独立验证。
 
@@ -130,11 +130,11 @@ description: "Task list for AgentReplayGuard 002 异步副作用安全测试"
 
 **Purpose**: 文档、版本与全量验证。
 
-- [ ] T021 [P] 更新 `docs/quickstart.md`：新增异步用法、`acall` 示例、忘记 await 的常见错误说明
-- [ ] T022 [P] 更新 `README.md`：能力清单加入异步执行支持，路线图勾选 002
-- [ ] T023 将 `pyproject.toml` 版本提升到 `0.2.0`，并确认版本号与功能范围一致
-- [ ] T024 运行 `specs/002-async-execution-support/quickstart.md` 全流程：`pytest tests examples/refund`、`ruff check .`、`mypy src/agentreplayguard`、`coverage report --fail-under=90`
-- [ ] T025 核对 001 同步测试无回归，确认公开 API 无破坏性变更
+- [x] T021 [P] 更新 `docs/quickstart.md`：新增异步用法、`acall` 示例、忘记 await 的常见错误说明
+- [x] T022 [P] 更新 `README.md`：能力清单加入异步执行支持，路线图勾选 002
+- [x] T023 将 `pyproject.toml` 版本提升到 `0.2.0`，并确认版本号与功能范围一致
+- [x] T024 运行 `specs/002-async-execution-support/quickstart.md` 全流程：`pytest tests examples/refund`、`ruff check .`、`mypy src/agentreplayguard`、`coverage report --fail-under=90`
+- [x] T025 核对 001 同步测试无回归，确认公开 API 无破坏性变更
 
 ---
 

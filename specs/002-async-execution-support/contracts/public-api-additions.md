@@ -74,7 +74,7 @@ class LangGraphAdapter:
 
 | 方法 | 前置条件 | 违反时 |
 |------|----------|--------|
-| `ainvoke` | 图具备 `ainvoke`、`get_state`、`get_graph` | `UnsupportedGraphError` |
+| `ainvoke` | 图具备 `ainvoke`（构造时已要求 `invoke`/`get_state`/`get_graph`） | `UnsupportedGraphError` |
 | `aresume` | 已存在前次 run；图有 checkpointer | `ScenarioConfigError` / `UnsupportedGraphError` |
 | `aresume_interrupt` | 前次 run 处于 interrupted；图有 checkpointer | `ScenarioConfigError` / `UnsupportedGraphError` |
 

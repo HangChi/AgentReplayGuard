@@ -1,23 +1,36 @@
-"""EffectGuard：参数绑定、哈希、attempt 累计与故障接线。"""
+"""EffectGuard：参数绑定、哈希、attempt 累计与故障接线（同步 + 异步）。"""
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import hashlib
 import inspect
 import json
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
+from dataclasses import dataclass
 from typing import Any, TypeVar, cast
 
 from .clock import LogicalClock
 from .effects import EffectRecord, EffectStatus, EffectStore
 from .errors import ScenarioConfigError
-from .faults import FaultInjector, FaultKind, fault_exception, is_before_commit
+from .faults import (
+    FaultDirective,
+    FaultInjector,
+    FaultKind,
+    fault_exception,
+    is_before_commit,
+)
 
 F = TypeVar("F", bound=Callable[..., Any])
 T = TypeVar("T")
 
 _MAX_ERROR_MESSAGE = 500
+
+_ASYNC_MISUSE_MESSAGE = (
+    "async effect functions must be awaited via the async path: "
+    "use `await guard.acall(...)` or `await` the decorated async tool"
+)
 
 
 def _canonical_json(obj: Any) -> str:
@@ -33,6 +46,22 @@ def _sha256(text: str) -> str:
 
 def _truncate(text: str) -> str:
     return text if len(text) <= _MAX_ERROR_MESSAGE else text[:_MAX_ERROR_MESSAGE]
+
+
+@dataclass(frozen=True)
+class _Attempt:
+    """一次已准备好的副作用尝试：解析结果、故障判定与归属信息。"""
+
+    effect_type: str
+    business_key: str
+    params_hash: str
+    idempotency_key_hash: str | None
+    attempt: int
+    directive: FaultDirective | None
+    run_id: str | None
+    thread_id: str | None
+    checkpoint_id: str | None
+    started_tick: int
 
 
 class EffectGuard:
@@ -62,6 +91,22 @@ class EffectGuard:
         idempotency_key: str | Callable[[Mapping[str, Any]], str | None] | None = None,
     ) -> Callable[[F], F]:
         def decorator(fn: F) -> F:
+            if inspect.iscoroutinefunction(fn):
+
+                @functools.wraps(fn)
+                async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                    return await self.acall(
+                        effect_type,
+                        fn,
+                        *args,
+                        key=key,
+                        params=params,
+                        idempotency_key=idempotency_key,
+                        **kwargs,
+                    )
+
+                return cast(F, async_wrapper)
+
             @functools.wraps(fn)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
                 return self.call(
@@ -89,6 +134,103 @@ class EffectGuard:
         **kwargs: Any,
     ) -> T:
         self._check_state()
+        if inspect.iscoroutinefunction(fn):
+            raise ScenarioConfigError(_ASYNC_MISUSE_MESSAGE)
+        attempt = self._begin_attempt(
+            effect_type,
+            fn,
+            args,
+            kwargs,
+            key=key,
+            params=params,
+            idempotency_key=idempotency_key,
+        )
+        self._raise_if_before_commit(attempt)
+
+        try:
+            result = fn(*args, **kwargs)
+        except Exception as exc:
+            self._record_outcome(
+                attempt,
+                EffectStatus.NOT_COMMITTED,
+                error_type=type(exc).__name__,
+                error_message=_truncate(str(exc)),
+            )
+            raise
+
+        self._raise_if_after_commit(attempt)
+        self._record_outcome(attempt, EffectStatus.COMMITTED)
+        return result
+
+    async def acall(
+        self,
+        effect_type: str,
+        fn: Callable[..., T] | Callable[..., Awaitable[T]],
+        *args: Any,
+        key: str | Callable[[Mapping[str, Any]], str],
+        params: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+        idempotency_key: str | Callable[[Mapping[str, Any]], str | None] | None = None,
+        **kwargs: Any,
+    ) -> T:
+        self._check_state()
+        attempt = self._begin_attempt(
+            effect_type,
+            fn,
+            args,
+            kwargs,
+            key=key,
+            params=params,
+            idempotency_key=idempotency_key,
+        )
+        self._raise_if_before_commit(attempt)
+
+        try:
+            result = await self._invoke(fn, args, kwargs)
+        except asyncio.CancelledError as exc:
+            self._record_outcome(
+                attempt,
+                EffectStatus.UNKNOWN,
+                error_type=type(exc).__name__,
+                error_message=_truncate(str(exc)),
+            )
+            raise
+        except Exception as exc:
+            self._record_outcome(
+                attempt,
+                EffectStatus.NOT_COMMITTED,
+                error_type=type(exc).__name__,
+                error_message=_truncate(str(exc)),
+            )
+            raise
+
+        self._raise_if_after_commit(attempt)
+        self._record_outcome(attempt, EffectStatus.COMMITTED)
+        return cast("T", result)
+
+    # 内部实现
+
+    @staticmethod
+    async def _invoke(
+        fn: Callable[..., Any],
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> Any:
+        """同步函数直接执行；异步函数 await 后返回。"""
+        if inspect.iscoroutinefunction(fn):
+            return await fn(*args, **kwargs)
+        return fn(*args, **kwargs)
+
+    def _begin_attempt(
+        self,
+        effect_type: str,
+        fn: Callable[..., Any],
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+        *,
+        key: str | Callable[[Mapping[str, Any]], str],
+        params: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None,
+        idempotency_key: str | Callable[[Mapping[str, Any]], str | None] | None,
+    ) -> _Attempt:
         bound = inspect.signature(fn).bind(*args, **kwargs)
         arg_map: dict[str, Any] = dict(bound.arguments)
 
@@ -101,63 +243,46 @@ class EffectGuard:
         directive = self._injector.next_directive(effect_type, business_key, attempt)
         run_id, thread_id, checkpoint_id = self._run_context()
 
-        started_tick = self._clock.tick()
+        return _Attempt(
+            effect_type=effect_type,
+            business_key=business_key,
+            params_hash=params_hash,
+            idempotency_key_hash=idempotency_key_hash,
+            attempt=attempt,
+            directive=directive,
+            run_id=run_id,
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+            started_tick=self._clock.tick(),
+        )
 
-        def record(
-            status: EffectStatus,
-            *,
-            fault: FaultKind | None = None,
-            error_type: str | None = None,
-            error_message: str | None = None,
-        ) -> None:
-            self._record(
-                effect_type=effect_type,
-                business_key=business_key,
-                params_hash=params_hash,
-                idempotency_key_hash=idempotency_key_hash,
-                attempt=attempt,
-                status=status,
-                fault=fault,
-                error_type=error_type,
-                error_message=error_message,
-                run_id=run_id,
-                thread_id=thread_id,
-                checkpoint_id=checkpoint_id,
-                started_tick=started_tick,
-            )
+    def _raise_if_before_commit(self, attempt: _Attempt) -> None:
+        directive = attempt.directive
+        if directive is None or not is_before_commit(directive.kind):
+            return
+        exc = fault_exception(directive.kind)
+        self._record_outcome(
+            attempt,
+            EffectStatus.NOT_COMMITTED,
+            fault=directive.kind,
+            error_type=type(exc).__name__,
+            error_message=_truncate(str(exc)),
+        )
+        raise exc
 
-        if directive is not None and is_before_commit(directive.kind):
-            exc = fault_exception(directive.kind)
-            record(
-                EffectStatus.NOT_COMMITTED,
-                fault=directive.kind,
-                error_type=type(exc).__name__,
-                error_message=_truncate(str(exc)),
-            )
-            raise exc
-
-        try:
-            result = fn(*args, **kwargs)
-        except Exception as exc:
-            record(
-                EffectStatus.NOT_COMMITTED,
-                error_type=type(exc).__name__,
-                error_message=_truncate(str(exc)),
-            )
-            raise
-
-        if directive is not None and not is_before_commit(directive.kind):
-            fault_exc = fault_exception(directive.kind)
-            record(
-                EffectStatus.COMMITTED,
-                fault=directive.kind,
-                error_type=type(fault_exc).__name__,
-                error_message=_truncate(str(fault_exc)),
-            )
-            raise fault_exc
-
-        record(EffectStatus.COMMITTED)
-        return result
+    def _raise_if_after_commit(self, attempt: _Attempt) -> None:
+        directive = attempt.directive
+        if directive is None or is_before_commit(directive.kind):
+            return
+        exc = fault_exception(directive.kind)
+        self._record_outcome(
+            attempt,
+            EffectStatus.COMMITTED,
+            fault=directive.kind,
+            error_type=type(exc).__name__,
+            error_message=_truncate(str(exc)),
+        )
+        raise exc
 
     def _resolve_key(
         self,
@@ -210,39 +335,31 @@ class EffectGuard:
             raise ScenarioConfigError("idempotency_key must be a str or None")
         return _sha256(value)
 
-    def _record(
+    def _record_outcome(
         self,
-        *,
-        effect_type: str,
-        business_key: str,
-        params_hash: str,
-        idempotency_key_hash: str | None,
-        attempt: int,
+        attempt: _Attempt,
         status: EffectStatus,
-        fault: FaultKind | None,
-        error_type: str | None,
-        error_message: str | None,
-        run_id: str | None,
-        thread_id: str | None,
-        checkpoint_id: str | None,
-        started_tick: int,
+        *,
+        fault: FaultKind | None = None,
+        error_type: str | None = None,
+        error_message: str | None = None,
     ) -> None:
         record = EffectRecord(
             effect_id=self._store._next_effect_id(),
             sequence=self._store._next_sequence(),
-            effect_type=effect_type,
-            business_key=business_key,
-            params_hash=params_hash,
-            idempotency_key_hash=idempotency_key_hash,
-            attempt=attempt,
+            effect_type=attempt.effect_type,
+            business_key=attempt.business_key,
+            params_hash=attempt.params_hash,
+            idempotency_key_hash=attempt.idempotency_key_hash,
+            attempt=attempt.attempt,
             status=status,
             fault=fault,
             error_type=error_type,
             error_message=error_message,
-            run_id=run_id,
-            thread_id=thread_id,
-            checkpoint_id=checkpoint_id,
-            started_tick=started_tick,
+            run_id=attempt.run_id,
+            thread_id=attempt.thread_id,
+            checkpoint_id=attempt.checkpoint_id,
+            started_tick=attempt.started_tick,
             ended_tick=self._clock.tick(),
         )
         self._store._append(record)

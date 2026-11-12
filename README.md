@@ -24,7 +24,7 @@ AI Agent 调用有副作用的工具时，失败语义与普通函数不同：
 - [x] Phase 2 技术架构（[实现计划](specs/001-effect-safety-testing/plan.md)、[公开 API 契约](specs/001-effect-safety-testing/contracts/public-api.md)）
 - [x] Phase 3 项目初始化
 - [x] Phase 4 MVP 开发（[任务清单](specs/001-effect-safety-testing/tasks.md)）
-- [ ] Phase 5 开源发布
+- [x] Phase 5 开源发布（[GitHub 仓库](https://github.com/HangChi/AgentReplayGuard)、[v0.1.0 Release](https://github.com/HangChi/AgentReplayGuard/releases/tag/v0.1.0)）
 
 ## 快速开始
 

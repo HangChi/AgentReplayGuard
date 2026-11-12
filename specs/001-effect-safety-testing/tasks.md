@@ -149,11 +149,11 @@ description: "Task list for AgentReplayGuard MVP implementation"
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T036 [P] [US5] 补充 `tests/unit/test_invariants_custom.py`：`CustomInvariant` 通过/失败/抛异常三态、`MaxEffectCount` 边界（max_count=0）
+- [X] T036 [P] [US5] 补充 `tests/unit/test_invariants_custom.py`：`CustomInvariant` 通过/失败/抛异常三态、`MaxEffectCount` 边界（max_count=0）
 
 ### Implementation for User Story 5
 
-- [ ] T037 [US5] 编写 `examples/refund/test_refund_invariants.py`：`MaxEffectCount("refund", 1)` 与自定义 predicate 的通过/失败用例
+- [X] T037 [US5] 编写 `examples/refund/test_refund_invariants.py`：`MaxEffectCount("refund", 1)` 与自定义 predicate 的通过/失败用例
 
 **Checkpoint**: US1–US5 均可独立验证。
 

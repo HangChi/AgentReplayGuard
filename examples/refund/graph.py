@@ -13,8 +13,9 @@ def build_graph(
     refund: Callable[..., Any],
     notify: Callable[..., Any],
     *,
-    retry_policy: RetryPolicy,
+    retry_policy: RetryPolicy | None = None,
     idempotency_key_factory: Callable[[dict], str] | None = None,
+    checkpointer: Any | None = None,
 ):
     builder = StateGraph(dict)
 
@@ -29,9 +30,14 @@ def build_graph(
         notify(state["refund_id"])
         return dict(state)
 
-    builder.add_node("refund", do_refund, retry_policy=retry_policy)
+    if retry_policy is not None:
+        builder.add_node("refund", do_refund, retry_policy=retry_policy)
+    else:
+        builder.add_node("refund", do_refund)
     builder.add_node("notify", do_notify)
     builder.set_entry_point("refund")
     builder.add_edge("refund", "notify")
     builder.add_edge("notify", "__end__")
+    if checkpointer is not None:
+        return builder.compile(checkpointer=checkpointer)
     return builder.compile()

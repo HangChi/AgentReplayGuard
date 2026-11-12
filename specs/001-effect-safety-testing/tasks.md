@@ -110,13 +110,13 @@ description: "Task list for AgentReplayGuard MVP implementation"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T029 [P] [US3] 集成测试 `tests/integration/test_langgraph_resume.py`：effect 在 checkpoint 后 resume 不新增、effect 在 checkpoint 前 resume 新增并被检测、RunSegment 按 run_id 区分
+- [X] T029 [P] [US3] 集成测试 `tests/integration/test_langgraph_resume.py`：effect 在 checkpoint 后 resume 不新增、effect 在 checkpoint 前 resume 新增并被检测、RunSegment 按 run_id 区分
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] 实现 `src/agentreplayguard/adapters/langgraph.py`（`LangGraphAdapter`：`invoke`、`resume`、`state`、checkpoint 读取、RunSegment 上下文、`strict_graph` 检查）
-- [ ] T031 [P] [US3] 适配器单元测试 `tests/unit/test_adapter.py`（不依赖 langgraph，用假 graph stub 验证 checkpoint 读取与 RunSegment 生成、无 checkpointer 抛 `UnsupportedGraphError`）
-- [ ] T032 [US3] 编写 `examples/refund/test_refund_resume.py`：恢复后不新增 committed（effect 已完成场景）
+- [X] T030 [US3] 实现 `src/agentreplayguard/adapters/langgraph.py`（`LangGraphAdapter`：`invoke`、`resume`、`state`、checkpoint 读取、RunSegment 上下文、`strict_graph` 检查）
+- [X] T031 [P] [US3] 适配器单元测试 `tests/unit/test_adapter.py`（不依赖 langgraph，用假 graph stub 验证 checkpoint 读取与 RunSegment 生成、无 checkpointer 抛 `UnsupportedGraphError`）
+- [X] T032 [US3] 编写 `examples/refund/test_refund_resume.py`：恢复后不新增 committed（effect 已完成场景）
 
 **Checkpoint**: US1–US3 均可独立验证。
 

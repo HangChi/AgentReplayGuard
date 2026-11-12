@@ -136,6 +136,9 @@ class Scenario:
     def _add_run_segment(self, segment: RunSegment) -> None:
         self._run_segments.append(segment)
 
+    def _tick(self) -> int:
+        return self._clock.tick()
+
     def _warn(self, message: str) -> None:
         self._extra_warnings.append(message)
 

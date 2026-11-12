@@ -182,10 +182,10 @@ description: "Task list for AgentReplayGuard MVP implementation"
 
 **Purpose**: 影响多个故事的收尾工作。
 
-- [ ] T041 [P] 运行 `specs/001-effect-safety-testing/quickstart.md` 全流程验证（安装→全部示例→覆盖率→ruff/mypy）
-- [ ] T042 [P] 验证核心模块行覆盖率 ≥90%（`pytest --cov=agentreplayguard --cov-report=term-missing`）
-- [ ] T043 [P] 校验 `tests/integration/test_langgraph_retry.py` 覆盖「默认 retry_on 不重试 OSError」与「显式 retry_on 重试」两组行为
-- [ ] T044 [P] 完善 `docs/quickstart.md` 与 README 的用户接入说明（引用 contracts 与 quickstart.md，不重复实现细节）
+- [X] T041 [P] 运行 `specs/001-effect-safety-testing/quickstart.md` 全流程验证（安装→全部示例→覆盖率→ruff/mypy）
+- [X] T042 [P] 验证核心模块行覆盖率 ≥90%（`coverage run -m pytest && coverage report`）
+- [X] T043 [P] 校验 `tests/integration/test_langgraph_retry.py` 覆盖「默认 retry_on 不重试 OSError」与「显式 retry_on 重试」两组行为
+- [X] T044 [P] 完善 `docs/quickstart.md` 与 README 的用户接入说明（引用 contracts 与 quickstart.md，不重复实现细节）
 
 ---
 

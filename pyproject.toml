@@ -58,6 +58,15 @@ markers = [
     "integration: integration tests requiring the langgraph optional dependency",
 ]
 
+[tool.coverage.run]
+# 本包同时是 pytest 插件（pytest11 entry point），会在 pytest-cov 启动前被导入，
+# 因此用 `coverage run -m pytest` 而非 `pytest --cov` 来测量源码覆盖率。
+source = ["agentreplayguard"]
+omit = ["tests/*", "examples/*"]
+
+[tool.coverage.report]
+show_missing = true
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"

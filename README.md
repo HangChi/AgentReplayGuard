@@ -3,8 +3,8 @@
 面向 **LangGraph + pytest** 的副作用安全测试工具：用确定性的故障注入与 effect 账本，验证
 重试、Checkpoint 恢复与 Interrupt 重放不会重复执行支付、退款、写入、通知等业务操作。
 
-> 项目处于早期开发阶段（MVP）。当前仓库包含产品定位、技术架构与任务清单，核心实现尚未
-> 完成。
+> MVP 核心实现已完成（US1–US6），覆盖 lost-ack 重复副作用、幂等键、Checkpoint 恢复、
+> Interrupt 重放、业务不变量与确定性回归；正在收尾（发布前校验与文档）。
 
 ## 它解决什么问题
 
@@ -23,18 +23,18 @@ AI Agent 调用有副作用的工具时，失败语义与普通函数不同：
 - [x] Phase 1 产品定义（[产品定位](docs/product-positioning.md)、[MVP 规格](specs/001-effect-safety-testing/spec.md)）
 - [x] Phase 2 技术架构（[实现计划](specs/001-effect-safety-testing/plan.md)、[公开 API 契约](specs/001-effect-safety-testing/contracts/public-api.md)）
 - [x] Phase 3 项目初始化
-- [ ] Phase 4 MVP 开发（[任务清单](specs/001-effect-safety-testing/tasks.md)）
+- [x] Phase 4 MVP 开发（[任务清单](specs/001-effect-safety-testing/tasks.md)）
 - [ ] Phase 5 开源发布
 
-## 快速开始（规划）
+## 快速开始
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,langgraph]"
 pytest examples/refund -q
 ```
 
-详细的验收步骤见 [quickstart.md](specs/001-effect-safety-testing/quickstart.md)。
+用户接入说明见 [docs/quickstart.md](docs/quickstart.md)，完整验收步骤见
+[quickstart.md](specs/001-effect-safety-testing/quickstart.md)。
 
 ## 核心概念
 

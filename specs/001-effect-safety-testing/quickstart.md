@@ -100,12 +100,15 @@ pytest tests/integration/test_determinism_and_offline.py -q
 ### 6. 覆盖率与静态检查
 
 ```bash
-pytest --cov=agentreplayguard --cov-report=term-missing
+coverage run -m pytest && coverage report
 ruff check .
 mypy src/agentreplayguard
 ```
 
 **预期**: 核心模块行覆盖率 ≥90%；ruff/mypy 无错误。
+
+> 覆盖率用 `coverage run` 而非 `pytest --cov`：本包同时是 pytest 插件（`pytest11`
+> entry point），会在 pytest-cov 启动测量前被导入，`pytest --cov` 无法正确计量源码。
 
 ## 用户侧最小代码形态
 
@@ -142,7 +145,7 @@ def test_lost_ack_detects_duplicate(replayguard, refund_scenario):
 1. 副作用工具用 `scenario.guard().effect(...)` 包装。
 2. `RetryPolicy` 显式设置 `retry_on=(TimeoutError, ConnectionError, ServiceError)`。
 3. 示例设置 `initial_interval=0`、`jitter=False`。
-4. `examples/refund/conftest.py` 提供 `refund_scenario` fixture，用
+4. `examples/refund/conftest.py` 提供 `lost_ack_scenario` fixture，用
    `SimulatedRefundService` 替换真实服务；该 fixture 属于示例，不是库的公开 fixture。
 
 ## 故障排查

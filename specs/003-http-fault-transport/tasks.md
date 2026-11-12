@@ -24,7 +24,7 @@
 
 **Purpose**: 可选依赖与版本元数据
 
-- [ ] T001 Add optional extra and dev dependency for httpx; bump version to 0.3.0 in `pyproject.toml`, then run `uv lock` and `uv sync --extra dev --extra httpx` to refresh `uv.lock`
+- [x] T001 Add optional extra and dev dependency for httpx; bump version to 0.3.0 in `pyproject.toml`, then run `uv lock` and `uv sync --extra dev --extra httpx` to refresh `uv.lock`
 
 **Checkpoint**: `uv run python -c "import httpx"` 成功，核心包仍无新增必选依赖。
 
@@ -36,8 +36,8 @@
 
 **⚠️ CRITICAL**: US1–US4 均依赖本阶段
 
-- [ ] T002 [P] Write failing tests for `HttpEffect` validation, optional-import isolation, and core-package import behavior in `tests/unit/test_http_effect.py` and `tests/contract/test_http_public_api.py`
-- [ ] T003 Implement module skeleton in `src/agentreplayguard/adapters/httpx.py`: actionable `ImportError` when httpx is missing, frozen `HttpEffect` dataclass with field validation, `ClassifyRequest` type alias, and `_map_injected_fault(record, request)` helper covering all five `FaultKind` values
+- [x] T002 [P] Write failing tests for `HttpEffect` validation, optional-import isolation, and core-package import behavior in `tests/unit/test_http_effect.py` and `tests/contract/test_http_public_api.py`
+- [x] T003 Implement module skeleton in `src/agentreplayguard/adapters/httpx.py`: actionable `ImportError` when httpx is missing, frozen `HttpEffect` dataclass with field validation, `ClassifyRequest` type alias, and `_map_injected_fault(record, request)` helper covering all five `FaultKind` values
 
 **Checkpoint**: `HttpEffect` 可构造并校验；未匹配/映射辅助函数可被单元测试直接调用。
 
@@ -53,11 +53,11 @@
 
 > 先写测试并确认失败
 
-- [ ] T004 [P] [US1] Write failing sync transport tests in `tests/unit/test_http_transport.py`: normal classified request records one `committed`, lost-ack retry records two `committed` with attempts 1/2, before-commit fault raises `httpx.ConnectTimeout` without calling base, base exception records `not_committed` and propagates unchanged, `close()` delegates to base
+- [x] T004 [P] [US1] Write failing sync transport tests in `tests/unit/test_http_transport.py`: normal classified request records one `committed`, lost-ack retry records two `committed` with attempts 1/2, before-commit fault raises `httpx.ConnectTimeout` without calling base, base exception records `not_committed` and propagates unchanged, `close()` delegates to base
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Implement `FaultyTransport(httpx.BaseTransport)` in `src/agentreplayguard/adapters/httpx.py`: classify request, call `scenario.guard().call` for matched requests, pass through unmatched, translate guard faults via `_map_injected_fault`, delegate `close()`
+- [x] T005 [US1] Implement `FaultyTransport(httpx.BaseTransport)` in `src/agentreplayguard/adapters/httpx.py`: classify request, call `scenario.guard().call` for matched requests, pass through unmatched, translate guard faults via `_map_injected_fault`, delegate `close()`
 
 **Checkpoint**: US1 独立可用；同步客户端零业务改动即可复现 lost-ack。
 
@@ -71,11 +71,11 @@
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T006 [P] [US2] Write failing async transport tests in `tests/unit/test_http_transport_async.py`: normal request, lost-ack retry, cancellation records `unknown` and propagates `CancelledError`, base exception propagation, `aclose()` delegation, sync/async parity of records/status/attempt
+- [x] T006 [P] [US2] Write failing async transport tests in `tests/unit/test_http_transport_async.py`: normal request, lost-ack retry, cancellation records `unknown` and propagates `CancelledError`, base exception propagation, `aclose()` delegation, sync/async parity of records/status/attempt
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Implement `AsyncFaultyTransport(httpx.AsyncBaseTransport)` in `src/agentreplayguard/adapters/httpx.py`: `await scenario.guard().acall` for matched requests, pass through unmatched, translate faults, delegate `aclose()`
+- [x] T007 [US2] Implement `AsyncFaultyTransport(httpx.AsyncBaseTransport)` in `src/agentreplayguard/adapters/httpx.py`: `await scenario.guard().acall` for matched requests, pass through unmatched, translate faults, delegate `aclose()`
 
 **Checkpoint**: 同步与异步 API 均可独立演示 lost-ack。
 
@@ -89,11 +89,11 @@
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T008 [P] [US3] Write failing classification tests in `tests/unit/test_http_transport.py`: extract business key from JSON body, extract idempotency key from header and JSON field, unmatched GET passes through with zero records and no fault-plan consumption, classify raising wraps into `ScenarioConfigError` without calling base, non-`HttpEffect` return rejected, empty business key and non-serializable params fail fast
+- [x] T008 [P] [US3] Write failing classification tests in `tests/unit/test_http_transport.py`: extract business key from JSON body, extract idempotency key from header and JSON field, unmatched GET passes through with zero records and no fault-plan consumption, classify raising wraps into `ScenarioConfigError` without calling base, non-`HttpEffect` return rejected, empty business key and non-serializable params fail fast
 
 ### Implementation for User Story 3
 
-- [ ] T009 [US3] Add shared `_classify_or_raise` and request-binding helpers in `src/agentreplayguard/adapters/httpx.py`, wire both transports to use them, and ensure `params`/`idempotency_key` flow through `EffectGuard` hashing unchanged
+- [x] T009 [US3] Add shared `_classify_or_raise` and request-binding helpers in `src/agentreplayguard/adapters/httpx.py`, wire both transports to use them, and ensure `params`/`idempotency_key` flow through `EffectGuard` hashing unchanged
 
 **Checkpoint**: 读写区分与提取策略可用；误配置不会发出请求。
 
@@ -107,11 +107,11 @@
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T010 [P] [US4] Write failing fault-mapping tests in `tests/unit/test_http_transport.py`: timeout-before → `ConnectTimeout`, timeout-after → `ReadTimeout`, reset → `ConnectError`, server-error → `HTTPStatusError` with status 500, partial-success → `ReadError`; every mapped exception carries the original request and a `TimeoutError`/`ServiceError`/`PartialSuccessError` `__cause__`
+- [x] T010 [P] [US4] Write failing fault-mapping tests in `tests/unit/test_http_transport.py`: timeout-before → `ConnectTimeout`, timeout-after → `ReadTimeout`, reset → `ConnectError`, server-error → `HTTPStatusError` with status 500, partial-success → `ReadError`; every mapped exception carries the original request and a `TimeoutError`/`ServiceError`/`PartialSuccessError` `__cause__`
 
 ### Implementation for User Story 4
 
-- [ ] T011 [US4] Refine `_map_injected_fault` and its call sites in `src/agentreplayguard/adapters/httpx.py` so only records with `fault is not None` are translated and all other exceptions propagate unchanged
+- [x] T011 [US4] Refine `_map_injected_fault` and its call sites in `src/agentreplayguard/adapters/httpx.py` so only records with `fault is not None` are translated and all other exceptions propagate unchanged
 
 **Checkpoint**: 业务重试逻辑按客户端异常类型即可命中。
 
@@ -121,10 +121,10 @@
 
 **Purpose**: 示例、契约、文档与全量验证
 
-- [ ] T012 [P] Add `examples/refund/http_tools.py` and `examples/refund/test_refund_http.py`: in-process `httpx.MockTransport` refund service, classify function (JSON body + `Idempotency-Key`), sync and async lost-ack duplicate detection, and idempotent-key scenario passing
-- [ ] T013 [P] Extend `tests/contract/test_http_public_api.py`: assert public signatures, core import does not load the adapter, and a simulated missing-httpx subprocess shows the actionable `ImportError`
-- [ ] T014 [P] Update `README.md` and `docs/quickstart.md` with HTTP transport usage, supported httpx range, commit boundary (response headers), and installation command
-- [ ] T015 Run full verification: `uv run pytest -q`, `uv run ruff check .`, `uv run mypy src/agentreplayguard`, `uv run coverage run -m pytest -q && uv run coverage report --fail-under=90`; fix all failures and mark tasks complete
+- [x] T012 [P] Add `examples/refund/http_tools.py` and `examples/refund/test_refund_http.py`: in-process `httpx.MockTransport` refund service, classify function (JSON body + `Idempotency-Key`), sync and async lost-ack duplicate detection, and idempotent-key scenario passing
+- [x] T013 [P] Extend `tests/contract/test_http_public_api.py`: assert public signatures, core import does not load the adapter, and a simulated missing-httpx subprocess shows the actionable `ImportError`
+- [x] T014 [P] Update `README.md` and `docs/quickstart.md` with HTTP transport usage, supported httpx range, commit boundary (response headers), and installation command
+- [x] T015 Run full verification: `uv run pytest -q`, `uv run ruff check .`, `uv run mypy src/agentreplayguard`, `uv run coverage run -m pytest -q && uv run coverage report --fail-under=90`; fix all failures and mark tasks complete
 
 **Checkpoint**: 全部质量闸门通过，示例与文档可运行。
 

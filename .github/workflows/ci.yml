@@ -45,11 +45,9 @@ jobs:
         # runner 无法回传任务结果，导致 job 永久停在 in_progress。
         # 依赖安装已在上一步完成，测试内部另有 socket 级断网断言。
         env:
+          # GitHub 对 env 键名做大小写不敏感校验，故仅保留大写形式。
           HTTP_PROXY: http://127.0.0.1:9
           HTTPS_PROXY: http://127.0.0.1:9
           ALL_PROXY: http://127.0.0.1:9
-          http_proxy: http://127.0.0.1:9
-          https_proxy: http://127.0.0.1:9
-          all_proxy: http://127.0.0.1:9
           NO_PROXY: ""
         run: uv run pytest tests/integration/test_determinism_and_offline.py -q

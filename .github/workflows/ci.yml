@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: test (${{ matrix.python }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,langgraph]"
+      - name: Lint
+        run: ruff check .
+      - name: Type check
+        run: mypy src/agentreplayguard
+      - name: Test
+        run: pytest --cov=agentreplayguard --cov-report=term-missing --cov-fail-under=90
+
+  offline:
+    name: offline determinism check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,langgraph]"
+      - name: Test with network blocked
+        # 阻断外部网络，验证无真实外部请求；loopback 与 PyPI 缓存已在上一步完成。
+        run: |
+          sudo ip link set lo down || true
+          pytest tests/integration/test_determinism_and_offline.py -q

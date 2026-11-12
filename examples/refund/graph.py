@@ -14,11 +14,15 @@ def build_graph(
     notify: Callable[..., Any],
     *,
     retry_policy: RetryPolicy,
+    idempotency_key_factory: Callable[[dict], str] | None = None,
 ):
     builder = StateGraph(dict)
 
     def do_refund(state: dict) -> dict:
-        refund(state["refund_id"], state["amount_cents"])
+        idempotency_key = (
+            idempotency_key_factory(state) if idempotency_key_factory else None
+        )
+        refund(state["refund_id"], state["amount_cents"], idempotency_key)
         return dict(state)
 
     def do_notify(state: dict) -> dict:

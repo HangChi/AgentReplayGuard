@@ -91,12 +91,12 @@ description: "Task list for AgentReplayGuard MVP implementation"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T026 [P] [US2] 幂等去重单元测试 `tests/unit/test_effects_idempotency.py`：相同键同参数不新增 committed 计数、相同键不同参数报 `parameter_mismatch`、无键重复计多次
+- [X] T026 [P] [US2] 幂等去重单元测试 `tests/unit/test_effects_idempotency.py`：相同键同参数不新增 committed 计数、相同键不同参数报 `parameter_mismatch`、无键重复计多次
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] 编写 `examples/refund/test_refund_idempotent.py`：`test_idempotent_single_refund`（通过）、`test_varying_key_detected`（不同键被检测）
-- [ ] T028 [US2] 确认 `NoDuplicateEffects` 与 `committed_count` 去重口径在 US2 场景下正确（补充断言，无需新模块）
+- [X] T027 [US2] 编写 `examples/refund/test_refund_idempotent.py`：`test_idempotent_single_refund`（通过）、`test_varying_key_detected`（不同键被检测）
+- [X] T028 [US2] 确认 `NoDuplicateEffects` 与 `committed_count` 去重口径在 US2 场景下正确（补充断言，无需新模块）
 
 **Checkpoint**: US1 + US2 均可独立验证。
 

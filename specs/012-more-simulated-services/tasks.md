@@ -12,35 +12,35 @@ description: "Task list for 012 more simulated services"
 
 ## Phase 0: 前置与基线（Setup）
 
-- [ ] T001 `pyproject.toml` 版本 bump 到 0.12.0
-- [ ] T002 运行基线：`pytest -q`、`ruff check .`、`mypy src/agentreplayguard`、`coverage
+- [x] T001 `pyproject.toml` 版本 bump 到 0.12.0
+- [x] T002 运行基线：`pytest -q`、`ruff check .`、`mypy src/agentreplayguard`、`coverage
   --fail-under=90`，记录全绿
 
 ---
 
 ## Phase 1: 三个模拟服务（Priority: P1）🎯
 
-- [ ] T003 [P] 编写 `tests/unit/test_simulated_services.py`：订单/邮件/库存三个服务的幂等
+- [x] T003 [P] 编写 `tests/unit/test_simulated_services.py`：订单/邮件/库存三个服务的幂等
   去重、重复检测、幂等键冲突、count/查询接口（复用退款服务语义）
-- [ ] T004 [P] 实现 `services/order.py`：`SimulatedOrderService` + `Order`
-- [ ] T005 [P] 实现 `services/email.py`：`SimulatedEmailService` + `Email`
-- [ ] T006 [P] 实现 `services/inventory.py`：`SimulatedInventoryService` + `InventoryOp`
-- [ ] T007 抽取共享 `IdempotencyConflict`（若需）到 `services/_common.py`，退款服务改为导入
+- [x] T004 [P] 实现 `services/order.py`：`SimulatedOrderService` + `Order`
+- [x] T005 [P] 实现 `services/email.py`：`SimulatedEmailService` + `Email`
+- [x] T006 [P] 实现 `services/inventory.py`：`SimulatedInventoryService` + `InventoryOp`
+- [x] T007 抽取共享 `IdempotencyConflict`（若需）到 `services/_common.py`，退款服务改为导入
 
 ---
 
 ## Phase 2: 集成示例与文档（Integration & Docs）
 
-- [ ] T008 [P] 编写 `examples/more_services/test_order_lost_ack.py`：guard 装饰 + lost-ack
+- [x] T008 [P] 编写 `examples/more_services/test_order_lost_ack.py`：guard 装饰 + lost-ack
   重复检测示例（至少订单服务）
-- [ ] T009 [P] 更新 `docs/quickstart.md`：更多模拟服务模板用法
-- [ ] T010 [P] 更新 `README.md`：能力清单 + 路线图勾选 012
+- [x] T009 [P] 更新 `docs/quickstart.md`：更多模拟服务模板用法
+- [x] T010 [P] 更新 `README.md`：能力清单 + 路线图勾选 012
 
 ---
 
 ## Phase 3: 全量验证（Verification）
 
-- [ ] T011 全流程：`pytest tests examples`、`ruff check .`、`mypy src/agentreplayguard`、
+- [x] T011 全流程：`pytest tests examples`、`ruff check .`、`mypy src/agentreplayguard`、
   `coverage report --fail-under=90`，核对 001–011 无回归
 
 ---

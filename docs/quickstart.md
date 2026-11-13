@@ -415,6 +415,28 @@ test:
 - 与 pytest 自带的 `--junitxml`（记录 pytest 用例结果）正交——本方法输出的是「副作用安全
   检测」结论。
 
+## 更多模拟服务模板
+
+除退款外，内置了订单、邮件、库存三类模拟服务，复用同一「内存账本 + 幂等键」范式：
+
+```python
+from agentreplayguard.services.order import SimulatedOrderService
+from agentreplayguard.services.email import SimulatedEmailService
+from agentreplayguard.services.inventory import SimulatedInventoryService
+
+orders = SimulatedOrderService()
+orders.create_order("ORD-1", 1000, idempotency_key="ik-1")  # 幂等去重
+
+emails = SimulatedEmailService()
+emails.send("N-1", "subject", "body")
+
+inventory = SimulatedInventoryService()
+inventory.apply("SKU-1", "deduct", 5)
+```
+
+每个服务都是「内存账本 + 幂等键开关 + 幂等键冲突检测」，可仿照接入自己的外部服务模拟。
+集成示例见 `examples/more_services/test_order_lost_ack.py`。
+
 ## 可运行示例
 
 `examples/refund/` 包含完整示例（lost-ack、幂等键、Checkpoint 恢复、Interrupt 重放、

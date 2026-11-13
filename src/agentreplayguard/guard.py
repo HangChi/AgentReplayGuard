@@ -98,28 +98,16 @@ class EffectGuard:
 
                 @functools.wraps(fn)
                 async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-                    return await self.acall(
-                        effect_type,
-                        fn,
-                        *args,
-                        key=key,
-                        params=params,
-                        idempotency_key=idempotency_key,
-                        **kwargs,
+                    return await self._guarded_acall(
+                        effect_type, fn, args, kwargs, key, params, idempotency_key
                     )
 
                 return cast(F, async_wrapper)
 
             @functools.wraps(fn)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
-                return self.call(
-                    effect_type,
-                    fn,
-                    *args,
-                    key=key,
-                    params=params,
-                    idempotency_key=idempotency_key,
-                    **kwargs,
+                return self._guarded_call(
+                    effect_type, fn, args, kwargs, key, params, idempotency_key
                 )
 
             return cast(F, wrapper)
@@ -135,6 +123,36 @@ class EffectGuard:
         params: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
         idempotency_key: str | Callable[[Mapping[str, Any]], str | None] | None = None,
         **kwargs: Any,
+    ) -> T:
+        return self._guarded_call(
+            effect_type, fn, args, kwargs, key, params, idempotency_key
+        )
+
+    async def acall(
+        self,
+        effect_type: str,
+        fn: Callable[..., T] | Callable[..., Awaitable[T]],
+        *args: Any,
+        key: str | Callable[[Mapping[str, Any]], str],
+        params: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+        idempotency_key: str | Callable[[Mapping[str, Any]], str | None] | None = None,
+        **kwargs: Any,
+    ) -> T:
+        return await self._guarded_acall(
+            effect_type, fn, args, kwargs, key, params, idempotency_key
+        )
+
+    # 内部实现
+
+    def _guarded_call(
+        self,
+        effect_type: str,
+        fn: Callable[..., T],
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+        key: str | Callable[[Mapping[str, Any]], str],
+        params: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None,
+        idempotency_key: str | Callable[[Mapping[str, Any]], str | None] | None,
     ) -> T:
         self._check_state()
         if inspect.iscoroutinefunction(fn):
@@ -165,15 +183,15 @@ class EffectGuard:
         self._record_outcome(attempt, EffectStatus.COMMITTED)
         return result
 
-    async def acall(
+    async def _guarded_acall(
         self,
         effect_type: str,
         fn: Callable[..., T] | Callable[..., Awaitable[T]],
-        *args: Any,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
         key: str | Callable[[Mapping[str, Any]], str],
-        params: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
-        idempotency_key: str | Callable[[Mapping[str, Any]], str | None] | None = None,
-        **kwargs: Any,
+        params: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None,
+        idempotency_key: str | Callable[[Mapping[str, Any]], str | None] | None,
     ) -> T:
         self._check_state()
         attempt = self._begin_attempt(
@@ -209,8 +227,6 @@ class EffectGuard:
         self._raise_if_after_commit(attempt)
         self._record_outcome(attempt, EffectStatus.COMMITTED)
         return cast("T", result)
-
-    # 内部实现
 
     @staticmethod
     async def _invoke(

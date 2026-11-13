@@ -7,6 +7,21 @@ effect 账本，验证重试、Checkpoint 恢复与 Interrupt 重放不会重复
 ## 安装
 
 ```bash
+# 最小安装：核心包仅依赖标准库，故障注入与不变量断言开箱可用
+pip install agentreplayguard
+
+# 按需安装适配层（可组合）
+pip install "agentreplayguard[langgraph]"   # LangGraph 图适配（RetryPolicy / resume / interrupt / stream）
+pip install "agentreplayguard[httpx]"       # httpx 传输层故障注入
+pip install "agentreplayguard[requests]"    # requests 客户端适配
+pip install "agentreplayguard[agents]"      # OpenAI Agents SDK 工具
+```
+
+用 `uv` 等价写法：`uv add agentreplayguard --extra langgraph`。
+
+从源码开发（跑本仓库的测试与示例）用：
+
+```bash
 uv sync --extra dev --extra langgraph --extra httpx --extra requests --extra agents
 ```
 

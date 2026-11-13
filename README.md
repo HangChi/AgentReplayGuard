@@ -4,9 +4,9 @@
 重试、Checkpoint 恢复与 Interrupt 重放不会重复执行支付、退款、写入、通知等业务操作。
 
 > MVP 核心实现已完成（US1–US6），并已补齐异步工具、异步图执行、HTTP 传输层故障注入、
-> 并行 fan-out 图支持、流式接口、requests 适配器、多框架工具接入与报告导出；当前覆盖
-> lost-ack 重复副作用、幂等键、Checkpoint 恢复、Interrupt 重放、业务不变量、并行分支重复
-> 副作用、流式归属与确定性回归。
+> 并行 fan-out 图支持、流式接口、requests 适配器、多框架工具接入、报告导出与 JUnit 报告；
+> 当前覆盖 lost-ack 重复副作用、幂等键、Checkpoint 恢复、Interrupt 重放、业务不变量、
+> 并行分支重复副作用、流式归属与确定性回归。内置退款、订单、邮件、库存四类模拟服务模板。
 
 ## 它解决什么问题
 
@@ -41,13 +41,31 @@ AI Agent 调用有副作用的工具时，失败语义与普通函数不同：
 
 ## 快速开始
 
+### 安装
+
 ```bash
-uv sync --extra dev --extra langgraph --extra httpx
+# 最小安装：核心包仅依赖标准库
+pip install agentreplayguard
+
+# 按需安装适配层（可组合）
+pip install "agentreplayguard[langgraph]"   # LangGraph 图适配
+pip install "agentreplayguard[httpx]"       # httpx 传输层故障注入
+pip install "agentreplayguard[requests]"    # requests 客户端适配
+pip install "agentreplayguard[agents]"      # OpenAI Agents SDK 工具
+```
+
+用 `uv` 等价写法：`uv add agentreplayguard --extra langgraph`。
+
+### 从源码开发
+
+```bash
+uv sync --extra dev --extra langgraph --extra httpx --extra requests --extra agents
 uv run pytest examples/refund -q
 ```
 
 用户接入说明见 [docs/quickstart.md](docs/quickstart.md)，完整验收步骤见
-[quickstart.md](specs/001-effect-safety-testing/quickstart.md)。
+[quickstart.md](specs/001-effect-safety-testing/quickstart.md)，版本演进见
+[CHANGELOG.md](CHANGELOG.md)。
 
 ## 核心概念
 

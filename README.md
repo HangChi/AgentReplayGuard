@@ -35,6 +35,7 @@ AI Agent 调用有副作用的工具时，失败语义与普通函数不同：
 - [x] 报告结构化导出（[008 规格](specs/008-report-export/spec.md)）
 - [x] 流式响应体丢失语义（[009 规格](specs/009-stream-body-loss/spec.md)）
 - [x] 同步 stream 入口（[010 规格](specs/010-sync-stream/spec.md)）
+- [x] CI 报告格式（JUnit XML）（[011 规格](specs/011-junit-report/spec.md)）
 - [x] Phase 5 开源发布（[GitHub 仓库](https://github.com/HangChi/AgentReplayGuard)、[v0.1.0 Release](https://github.com/HangChi/AgentReplayGuard/releases/tag/v0.1.0)）
 
 ## 快速开始

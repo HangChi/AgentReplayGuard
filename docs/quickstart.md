@@ -383,6 +383,38 @@ json.loads(json_str)["violations"]  # 结构化消费违规信息
 
 导出与 `format()` 信息内容一致，确定性（字段顺序固定、无 wall clock）。
 
+## CI 报告（JUnit XML）
+
+`ScenarioReport.to_junit_xml()` 把检测结论导出为 CI 原生解析的 JUnit XML：每个场景映射为
+一个 `testsuite`，每个副作用违规映射为一个失败 `testcase`：
+
+```python
+report = scenario.finish()
+xml = report.to_junit_xml()
+
+with open("junit.xml", "w") as f:
+    f.write(xml)
+```
+
+GitLab CI 直接消费（`.gitlab-ci.yml`）：
+
+```yaml
+test:
+  script:
+    - uv run pytest -q
+    - python -c "import agentreplayguard; ..."  # 在测试里写 junit.xml
+  artifacts:
+    reports:
+      junit: junit.xml
+```
+
+注意：
+
+- `to_junit_xml()` 是确定性的（`time="0.0"`，不引入 wall clock）。
+- 无违规时产出一个通过的 `testcase`（`effects_safety`）；有违规时每个违规一个失败 `testcase`。
+- 与 pytest 自带的 `--junitxml`（记录 pytest 用例结果）正交——本方法输出的是「副作用安全
+  检测」结论。
+
 ## 可运行示例
 
 `examples/refund/` 包含完整示例（lost-ack、幂等键、Checkpoint 恢复、Interrupt 重放、

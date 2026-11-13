@@ -102,6 +102,12 @@ class ScenarioReport:
             separators=(",", ":"),
         )
 
+    def to_junit_xml(self) -> str:
+        """导出为 JUnit XML（CI 原生解析；每个 violation 映射为一个失败 testcase）。"""
+        from .junit import to_junit_xml
+
+        return to_junit_xml(self)
+
     @staticmethod
     def _format_effect(effect: EffectRecord) -> str:
         fault = effect.fault.value if effect.fault is not None else "-"

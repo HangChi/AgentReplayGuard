@@ -154,12 +154,12 @@ def test_fanout_deterministic_conclusion_and_branch():
         guard = scenario.guard()
         g = StateGraph(State)
 
-        def b(s):
-            guard.call("refund", lambda: None, key=lambda _: "ORDER-1")
+        def b(s, _guard=guard):
+            _guard.call("refund", lambda: None, key=lambda _: "ORDER-1")
             return {"log": ["b"]}
 
-        def c(s):
-            guard.call("refund", lambda: None, key=lambda _: "ORDER-1")
+        def c(s, _guard=guard):
+            _guard.call("refund", lambda: None, key=lambda _: "ORDER-1")
             return {"log": ["c"]}
 
         g.add_node("b", b)

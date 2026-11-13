@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from agentreplayguard import EffectStatus
-from agentreplayguard.effects import EffectRecord, EffectStore
+from agentreplayguard.effects import EffectRecord
 
 
 def test_effect_record_has_branch_id_default_none():

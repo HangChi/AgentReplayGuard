@@ -81,9 +81,10 @@ class ScenarioReport:
     @staticmethod
     def _format_effect(effect: EffectRecord) -> str:
         fault = effect.fault.value if effect.fault is not None else "-"
+        branch = effect.branch_id or "-"
         return (
             f"[{effect.effect_id}] {effect.effect_type} key={effect.business_key} "
             f"attempt={effect.attempt} status={effect.status.value} fault={fault} "
             f"run={effect.run_id or '-'} thread={effect.thread_id or '-'} "
-            f"checkpoint={effect.checkpoint_id or '-'}"
+            f"checkpoint={effect.checkpoint_id or '-'} branch={branch}"
         )

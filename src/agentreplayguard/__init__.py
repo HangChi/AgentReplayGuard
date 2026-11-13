@@ -18,6 +18,7 @@ from .errors import (
 from .faults import FaultKind, FaultPlan, FaultRule
 from .guard import EffectGuard
 from .invariants import (
+    ConcurrentCommitDetected,
     CustomInvariant,
     Invariant,
     MaxEffectCount,
@@ -28,6 +29,7 @@ from .report import GraphRun, RunInputKind, RunSegment, ScenarioReport
 from .scenario import Scenario
 
 __all__ = [
+    "ConcurrentCommitDetected",
     "CustomInvariant",
     "EffectGuard",
     "EffectRecord",

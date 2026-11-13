@@ -136,6 +136,62 @@ class MaxEffectCount:
         ]
 
 
+class ConcurrentCommitDetected:
+    """检测同一业务键被「并发」提交（effect 区间重叠）。
+
+    判定基于 `started_tick`/`ended_tick` 区间重叠：两条 COMMITTED 记录同
+    (effect_type, business_key)，若区间相交（`a.started < b.ended and b.started < a.ended`）
+    即为并发提交。与 `NoDuplicateEffects` 正交：前者判「并发」，后者判「重复」。
+    """
+
+    def __init__(self, effect_type: str | None = None) -> None:
+        self.effect_type = effect_type
+        self.name = (
+            "concurrent_commit"
+            if effect_type is None
+            else f"concurrent_commit:{effect_type}"
+        )
+
+    def check(self, view: EffectView) -> list[Violation]:
+        committed = _committed(view.records, self.effect_type)
+        groups: dict[tuple[str, str], list[EffectRecord]] = {}
+        for record in committed:
+            groups.setdefault((record.effect_type, record.business_key), []).append(record)
+
+        violations: list[Violation] = []
+        for (effect_type, business_key), group in groups.items():
+            if _any_overlap(group):
+                effect_ids = tuple(sorted(r.effect_id for r in group))
+                violations.append(
+                    Violation(
+                        invariant_name=self.name,
+                        message=(
+                            f"concurrent_commit: {effect_type} {business_key} "
+                            "committed by overlapping (concurrent) effects"
+                        ),
+                        expected="no overlapping effects",
+                        actual="overlapping effects",
+                        effect_ids=effect_ids,
+                    )
+                )
+
+        violations.sort(key=lambda v: v.effect_ids)
+        return violations
+
+
+def _any_overlap(group: list[EffectRecord]) -> bool:
+    """组内是否存在区间重叠的任意两条 COMMITTED 记录。"""
+    for i in range(len(group)):
+        for j in range(i + 1, len(group)):
+            a = group[i]
+            b = group[j]
+            if a.ended_tick is None or b.ended_tick is None:
+                continue
+            if a.started_tick < b.ended_tick and b.started_tick < a.ended_tick:
+                return True
+    return False
+
+
 class CustomInvariant:
     """用户自定义断言；predicate 返回 False 或抛异常即违规。"""
 

@@ -7,7 +7,7 @@ from typing import Annotated, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from agentreplayguard import Scenario
+from agentreplayguard import ConcurrentCommitDetected, Scenario
 from agentreplayguard.adapters.langgraph import LangGraphAdapter
 from agentreplayguard.effects import EffectRecord
 
@@ -54,3 +54,14 @@ def test_non_strict_skips_fanout_check_and_warns():
     adapter.invoke({"log": []})
     report = scenario.finish()
     assert any("strict_graph" in w for w in report.warnings)
+
+
+def test_concurrent_commit_detected_public_api():
+    """ConcurrentCommitDetected 与既有不变量风格一致。"""
+    inv = ConcurrentCommitDetected("refund")
+    assert inv.name == "concurrent_commit:refund"
+    assert inv.effect_type == "refund"
+
+    inv_all = ConcurrentCommitDetected()
+    assert inv_all.name == "concurrent_commit"
+    assert inv_all.effect_type is None

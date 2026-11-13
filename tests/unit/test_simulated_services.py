@@ -106,3 +106,45 @@ def test_records_are_dataclasses():
     assert isinstance(order, Order)
     assert isinstance(email, Email)
     assert isinstance(op, InventoryOp)
+
+
+def test_lookup_by_idempotency_key():
+    order_service = SimulatedOrderService()
+    order = order_service.create_order("ORD-1", 1000, idempotency_key="ik-1")
+    assert order_service.by_idempotency_key("ik-1") is order
+    assert order_service.by_idempotency_key("missing") is None
+
+    email_service = SimulatedEmailService()
+    email = email_service.send("N-1", "s", "b", idempotency_key="ik-1")
+    assert email_service.by_idempotency_key("ik-1") is email
+    assert email_service.by_idempotency_key("missing") is None
+
+    inventory_service = SimulatedInventoryService()
+    op = inventory_service.apply("SKU-1", "deduct", 5, idempotency_key="ik-1")
+    assert inventory_service.by_idempotency_key("ik-1") is op
+    assert inventory_service.by_idempotency_key("missing") is None
+
+
+def test_lookup_without_idempotency_key_is_not_indexed():
+    order_service = SimulatedOrderService()
+    order_service.create_order("ORD-1", 1000)
+    assert order_service.by_idempotency_key("ik-1") is None
+
+    email_service = SimulatedEmailService()
+    email_service.send("N-1", "s", "b")
+    assert email_service.by_idempotency_key("ik-1") is None
+
+    inventory_service = SimulatedInventoryService()
+    inventory_service.apply("SKU-1", "deduct", 5)
+    assert inventory_service.by_idempotency_key("ik-1") is None
+
+
+def test_ledger_sequence_and_committed_tick_are_monotonic():
+    service = SimulatedOrderService()
+    first = service.create_order("ORD-1", 1000)
+    second = service.create_order("ORD-2", 2000)
+
+    assert first.ledger_sequence == 1
+    assert second.ledger_sequence == 2
+    assert first.committed_tick == 1
+    assert second.committed_tick == 2

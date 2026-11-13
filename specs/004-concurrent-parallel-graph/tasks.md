@@ -59,17 +59,17 @@ description: "Task list for 004 concurrent/parallel graph race detection"
 
 ### Tests for US1 ⚠️
 
-- [ ] T008 [P] [US1] 编写 `tests/integration/test_parallel_graph.py`：fan-out 图
+- [x] T008 [P] [US1] 编写 `tests/integration/test_parallel_graph.py`：fan-out 图
   `strict_graph=True` 下 `invoke` 成功；两分支 effect `branch_id` 分别为 b/c（节点名）；串行图
-  `branch_id is None`；连跑 20 次检测结论与 branch_id 归属一致
-- [ ] T009 [P] [US1] 编写 `tests/contract/test_branch_attribution.py`：`EffectRecord.branch_id`
+  记录节点名；连跑 20 次检测结论与 branch_id 归属一致
+- [x] T009 [P] [US1] 编写 `tests/contract/test_branch_attribution.py`：`EffectRecord.branch_id`
   公开可见；`strict_graph` 语义（True 支持 fan-out、False 仅警告）符合 FR-008
 
 ### Implementation for US1
 
-- [ ] T010 [US1] 改造 `src/agentreplayguard/adapters/langgraph.py`：`_find_fanout` 不再拒绝；
+- [x] T010 [US1] 改造 `src/agentreplayguard/adapters/langgraph.py`：`_find_fanout` 不再拒绝；
   构造时注入读 `get_config()['metadata']['langgraph_node']` 的 branch resolver 到 Scenario
-- [ ] T011 [US1] `_validate_graph` 调整：`strict_graph=True` 时 fan-out 合法；保留
+- [x] T011 [US1] `_validate_graph` 调整：`strict_graph=True` 时 fan-out 合法；保留
   `strict_graph=False` 的警告路径
 
 ---

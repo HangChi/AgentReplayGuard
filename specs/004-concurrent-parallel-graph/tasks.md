@@ -121,21 +121,21 @@ effect_ids 两条分支归属不同。
 
 ## Phase 5: 文档与示例（Docs & Examples）
 
-- [ ] T019 [P] 新增 `examples/refund/graph_parallel.py` 与
+- [x] T019 [P] 新增 `examples/refund/graph_parallel.py` 与
   `examples/refund/test_refund_parallel.py`：并行重复退款示例（含幂等键通过 / 无幂等键失败）
-- [ ] T020 [P] 更新 `docs/quickstart.md`：新增并行图用法、`branch_id` 说明、`InvalidUpdateError`
+- [x] T020 [P] 更新 `docs/quickstart.md`：新增并行图用法、`branch_id` 说明、`InvalidUpdateError`
   注意事项
-- [ ] T021 [P] 更新 `README.md`：能力清单加入并行检测，路线图勾选 004
+- [x] T021 [P] 更新 `README.md`：能力清单加入并行检测，路线图勾选 004
 
 ---
 
 ## Phase 6: 全量验证（Verification）
 
-- [ ] T022 运行 `specs/004-concurrent-parallel-graph/quickstart.md` 全流程：`pytest tests
+- [x] T022 运行 `specs/004-concurrent-parallel-graph/quickstart.md` 全流程：`pytest tests
   examples/refund`、`ruff check .`、`mypy src/agentreplayguard`、`coverage report
   --fail-under=90`
-- [ ] T023 核对 001/002/003 无回归（串行图行为不变），确认公开 API 无破坏性变更
-- [ ] T024 确定性回归：连跑 20 次 fan-out 场景，检测结论与 branch_id 归属 20/20 一致
+- [x] T023 核对 001/002/003 无回归（串行图行为不变），确认公开 API 无破坏性变更
+- [x] T024 确定性回归：连跑 20 次 fan-out 场景，检测结论与 branch_id 归属 20/20 一致
   （effect 追加 sequence 顺序可抖动，不断言）
 
 ---

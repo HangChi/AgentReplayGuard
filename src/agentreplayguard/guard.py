@@ -62,6 +62,7 @@ class _Attempt:
     thread_id: str | None
     checkpoint_id: str | None
     started_tick: int
+    branch_id: str | None
 
 
 class EffectGuard:
@@ -75,12 +76,14 @@ class EffectGuard:
         *,
         run_context: Callable[[], tuple[str | None, str | None, str | None]],
         check_state: Callable[[], None],
+        branch_resolver: Callable[[], str | None] | None = None,
     ) -> None:
         self._store = store
         self._clock = clock
         self._injector = injector
         self._run_context = run_context
         self._check_state = check_state
+        self._branch_resolver = branch_resolver if branch_resolver is not None else (lambda: None)
 
     def effect(
         self,
@@ -242,6 +245,7 @@ class EffectGuard:
         attempt = self._store._next_attempt(effect_type, business_key)
         directive = self._injector.next_directive(effect_type, business_key, attempt)
         run_id, thread_id, checkpoint_id = self._run_context()
+        branch_id = self._branch_resolver()
 
         return _Attempt(
             effect_type=effect_type,
@@ -254,6 +258,7 @@ class EffectGuard:
             thread_id=thread_id,
             checkpoint_id=checkpoint_id,
             started_tick=self._clock.tick(),
+            branch_id=branch_id,
         )
 
     def _raise_if_before_commit(self, attempt: _Attempt) -> None:
@@ -361,5 +366,6 @@ class EffectGuard:
             checkpoint_id=attempt.checkpoint_id,
             started_tick=attempt.started_tick,
             ended_tick=self._clock.tick(),
+            branch_id=attempt.branch_id,
         )
         self._store._append(record)

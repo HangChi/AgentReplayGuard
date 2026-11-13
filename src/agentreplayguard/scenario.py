@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from enum import Enum
 
 from .clock import LogicalClock, counter_id
@@ -58,12 +58,15 @@ class Scenario:
         self._thread_id: str | None = None
         self._checkpoint_id: str | None = None
 
+        self._branch_resolver: Callable[[], str | None] = lambda: None
+
         self._guard = EffectGuard(
             self._store,
             self._clock,
             self._injector,
             run_context=self._current_run_context,
             check_state=self._ensure_running,
+            branch_resolver=self._resolve_branch,
         )
 
     @property
@@ -139,6 +142,13 @@ class Scenario:
 
     def _warn(self, message: str) -> None:
         self._extra_warnings.append(message)
+
+    def _set_branch_resolver(self, resolver: Callable[[], str | None]) -> None:
+        """注入分支归属解析器（仅供适配器层使用）。"""
+        self._branch_resolver = resolver
+
+    def _resolve_branch(self) -> str | None:
+        return self._branch_resolver()
 
     def _warnings(self) -> list[str]:
         warnings: list[str] = []

@@ -35,6 +35,7 @@ class EffectRecord:
     checkpoint_id: str | None
     started_tick: int
     ended_tick: int | None
+    branch_id: str | None = None
 
 
 def commit_identity(record: EffectRecord) -> tuple[str, str, str]:

@@ -161,6 +161,84 @@ async with httpx.AsyncClient(transport=transport) as client:
 - 提交边界是底层 transport 返回响应（响应头到达）；流式响应体读取失败不在 lost-ack 语义内。
 - 示例见 `examples/refund/http_tools.py` 与 `examples/refund/test_refund_http.py`。
 
+## 并行图（fan-out）与并发提交
+
+并行分支是重复副作用的独立来源：fan-out 图里多个分支若各自提交同一业务键，会产生重复。
+`LangGraphAdapter` 现在支持并行图，并为每个 effect 记录其来源节点（`branch_id`）：
+
+```python
+import operator
+from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, START, END
+from agentreplayguard import NoDuplicateEffects, Scenario
+from agentreplayguard.adapters.langgraph import LangGraphAdapter
+
+
+class State(TypedDict):
+    log: Annotated[list[str], operator.add]
+
+
+scenario = Scenario("parallel-refund", seed=0, invariants=[NoDuplicateEffects("refund")])
+guard = scenario.guard()
+
+
+def build_graph():
+    g = StateGraph(State)
+
+    def refund_a(s):
+        guard.call("refund", lambda: None, key=lambda _: "ORDER-1")
+        return {"log": ["refund_a"]}
+
+    def refund_b(s):
+        guard.call("refund", lambda: None, key=lambda _: "ORDER-1")
+        return {"log": ["refund_b"]}
+
+    g.add_node("refund_a", refund_a)
+    g.add_node("refund_b", refund_b)
+    g.add_edge(START, "refund_a")
+    g.add_edge(START, "refund_b")  # fan-out
+    g.add_edge("refund_a", END)
+    g.add_edge("refund_b", END)
+    return g.compile()
+
+
+adapter = LangGraphAdapter(scenario, build_graph())
+adapter.invoke({"log": []})
+report = scenario.finish()
+assert not report.ok  # ORDER-1 被两个分支各提交一次
+```
+
+异步交错 / 手动并发提交可用 `ConcurrentCommitDetected` 判定「并发」重复：
+
+```python
+import asyncio
+from agentreplayguard import ConcurrentCommitDetected
+
+scenario = Scenario("cc", seed=0, invariants=[ConcurrentCommitDetected("refund")])
+guard = scenario.guard()
+
+async def refund():
+    await asyncio.sleep(0.01)
+    return "ok"
+
+async def run():
+    await asyncio.gather(
+        guard.acall("refund", refund, key=lambda a: "ORDER-1"),
+        guard.acall("refund", refund, key=lambda a: "ORDER-1"),
+    )
+
+asyncio.run(run())
+assert not scenario.finish().ok
+```
+
+注意：
+
+- 并行分支写同一 channel 必须用 `Annotated` + reducer，否则 LangGraph 抛
+  `InvalidUpdateError`（图设计问题，工具不介入）。
+- LangGraph 的同步 fan-out 是线程池真并发，effect 的追加顺序（`sequence`）不保证确定；
+  但**检测结论与分支归属（`branch_id`）是确定的**。
+- 示例见 `examples/refund/graph_parallel.py` 与 `examples/refund/test_refund_parallel.py`。
+
 ## pytest fixture
 
 安装后插件自动注册 `replayguard` fixture，等价于 `Scenario` 构造器：
@@ -172,7 +250,8 @@ def test_something(replayguard):
 
 ## 可运行示例
 
-`examples/refund/` 包含完整示例（lost-ack、幂等键、Checkpoint 恢复、Interrupt 重放）：
+`examples/refund/` 包含完整示例（lost-ack、幂等键、Checkpoint 恢复、Interrupt 重放、
+并行 fan-out）：
 
 ```bash
 uv run pytest examples/refund -q
@@ -184,3 +263,4 @@ uv run pytest examples/refund -q
 - 完整端到端验收步骤：[specs/quickstart.md](../specs/001-effect-safety-testing/quickstart.md)
 - HTTP 传输层契约：[http-transport-api.md](../specs/003-http-fault-transport/contracts/http-transport-api.md)
 - HTTP 传输层验收：[quickstart.md](../specs/003-http-fault-transport/quickstart.md)
+- 并行图分支归属契约：[branch-attribution.md](../specs/004-concurrent-parallel-graph/contracts/branch-attribution.md)

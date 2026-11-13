@@ -161,6 +161,39 @@ async with httpx.AsyncClient(transport=transport) as client:
 - 提交边界是底层 transport 返回响应（响应头到达）；流式响应体读取失败不在 lost-ack 语义内。
 - 示例见 `examples/refund/http_tools.py` 与 `examples/refund/test_refund_http.py`。
 
+## HTTP 客户端（requests）
+
+如果业务副作用经由 `requests` 发出，用 `RequestsAdapter` 挂载到 Session，语义与 httpx 版
+一致：
+
+```python
+import requests
+from agentreplayguard.adapters.requests import RequestsAdapter, HttpEffect
+
+def classify(request: requests.PreparedRequest) -> HttpEffect | None:
+    if request.method != "POST":
+        return None
+    body = json.loads(request.body or b"{}")
+    return HttpEffect(
+        effect_type="refund",
+        business_key=body["refund_id"],
+        params={"amount_cents": body["amount_cents"]},
+        idempotency_key=request.headers.get("Idempotency-Key"),
+    )
+
+adapter = RequestsAdapter(base_adapter, scenario, classify)
+session = requests.Session()
+session.mount("https://", adapter)
+session.post("https://sim.test/refunds", json={"refund_id": "order-42", "amount_cents": 1000})
+```
+
+注意：
+
+- `requests` 是可选依赖：`pip install agentreplayguard[requests]`。
+- 注入故障映射为 requests 标准异常：`ConnectTimeout` / `ReadTimeout` / `ConnectionError` /
+  `HTTPError`（500）/ `ChunkedEncodingError`。
+- 示例见 `examples/refund/test_refund_requests.py`。
+
 ## 并行图（fan-out）与并发提交
 
 并行分支是重复副作用的独立来源：fan-out 图里多个分支若各自提交同一业务键，会产生重复。
@@ -299,3 +332,4 @@ uv run pytest examples/refund -q
 - HTTP 传输层验收：[quickstart.md](../specs/003-http-fault-transport/quickstart.md)
 - 并行图分支归属契约：[branch-attribution.md](../specs/004-concurrent-parallel-graph/contracts/branch-attribution.md)
 - 流式入口契约：[streaming-entry.md](../specs/005-streaming-fault-injection/contracts/streaming-entry.md)
+- requests 适配器契约：[requests-adapter.md](../specs/006-requests-adapter/contracts/requests-adapter.md)

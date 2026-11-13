@@ -4,8 +4,8 @@
 重试、Checkpoint 恢复与 Interrupt 重放不会重复执行支付、退款、写入、通知等业务操作。
 
 > MVP 核心实现已完成（US1–US6），并已补齐异步工具、异步图执行、HTTP 传输层故障注入、
-> 并行 fan-out 图支持与流式接口；当前覆盖 lost-ack 重复副作用、幂等键、Checkpoint 恢复、
-> Interrupt 重放、业务不变量、并行分支重复副作用、流式归属与确定性回归。
+> 并行 fan-out 图支持、流式接口与 requests 适配器；当前覆盖 lost-ack 重复副作用、幂等键、
+> Checkpoint 恢复、Interrupt 重放、业务不变量、并行分支重复副作用、流式归属与确定性回归。
 
 ## 它解决什么问题
 
@@ -29,6 +29,7 @@ AI Agent 调用有副作用的工具时，失败语义与普通函数不同：
 - [x] HTTP 故障注入传输层（[003 规格](specs/003-http-fault-transport/spec.md)）
 - [x] 并发与并行图副作用竞态检测（[004 规格](specs/004-concurrent-parallel-graph/spec.md)）
 - [x] 流式接口的副作用归属与故障注入（[005 规格](specs/005-streaming-fault-injection/spec.md)）
+- [x] requests 客户端适配器（[006 规格](specs/006-requests-adapter/spec.md)）
 - [x] Phase 5 开源发布（[GitHub 仓库](https://github.com/HangChi/AgentReplayGuard)、[v0.1.0 Release](https://github.com/HangChi/AgentReplayGuard/releases/tag/v0.1.0)）
 
 ## 快速开始
@@ -50,7 +51,7 @@ uv run pytest examples/refund -q
 | Simulated Service | 退款账本 + 幂等键开关 |
 | Invariant Checker | `no_duplicate_effects`、`max_effect_count`、`concurrent_commit`、自定义 predicate |
 | LangGraph Adapter | 驱动 RetryPolicy / resume / interrupt / astream，支持同步/异步与并行 fan-out，记录节点分支归属 |
-| HTTP Transport Adapter | 包裹 httpx 同步/异步 transport，业务代码零改动地记账并注入 lost-ack |
+| HTTP Transport Adapter | 包裹 httpx 同步/异步 transport 与 requests adapter，业务代码零改动地记账并注入 lost-ack |
 
 ## 许可
 

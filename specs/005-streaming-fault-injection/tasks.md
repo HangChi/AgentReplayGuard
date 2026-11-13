@@ -21,8 +21,8 @@ description: "Task list for 005 streaming fault injection"
 
 ## Phase 0: 前置与基线（Setup）
 
-- [ ] T001 将 `pyproject.toml` 版本提升到 `0.5.0`
-- [ ] T002 运行基线：`pytest -q`、`ruff check .`、`mypy src/agentreplayguard`、`coverage
+- [x] T001 将 `pyproject.toml` 版本提升到 `0.5.0`
+- [x] T002 运行基线：`pytest -q`、`ruff check .`、`mypy src/agentreplayguard`、`coverage
   --fail-under=90`，记录全绿
 
 ---
@@ -36,15 +36,15 @@ description: "Task list for 005 streaming fault injection"
 
 ### Tests for US1 ⚠️
 
-- [ ] T003 [P] [US1] 编写 `tests/integration/test_streaming.py`：`astream` 遍历产出 chunk；
+- [x] T003 [P] [US1] 编写 `tests/integration/test_streaming.py`：`astream` 遍历产出 chunk；
   effect `run_id`/`branch_id` 正确；`finish()` 后 RunSegment 结构正确；`ainvoke` vs `astream`
   结论一致；缺 `ainvoke` 抛 `UnsupportedGraphError`
-- [ ] T004 [P] [US1] 编写 `tests/unit/test_adapter_stream.py`：用假 graph stub 验证
+- [x] T004 [P] [US1] 编写 `tests/unit/test_adapter_stream.py`：用假 graph stub 验证
   `_begin_run`/`_finish_run` 在生成器生命周期正确调用（含提前 break 收尾）
 
 ### Implementation for US1
 
-- [ ] T005 [US1] 在 `adapters/langgraph.py` 新增 `astream` 异步生成器：`_ensure_async_capable`
+- [x] T005 [US1] 在 `adapters/langgraph.py` 新增 `astream` 异步生成器：`_ensure_async_capable`
   → `_begin_run` → 逐 chunk 透传 → `finally _finish_run`
 
 ---
@@ -57,13 +57,13 @@ description: "Task list for 005 streaming fault injection"
 
 ### Tests for US2 ⚠️
 
-- [ ] T006 [P] [US2] 扩展 `tests/integration/test_streaming.py`：lost-ack + retry 流式
+- [x] T006 [P] [US2] 扩展 `tests/integration/test_streaming.py`：lost-ack + retry 流式
   `committed_count=2`、`ok=False`；提交前故障 `not_committed` 且异常抛出；`ainvoke` vs
   `astream` 结论一致
 
 ### Implementation for US2
 
-- [ ] T007 [US2] 确认无需新增逻辑（复用 guard.call + 不变量），仅在流式遍历时累积 interrupts
+- [x] T007 [US2] 确认无需新增逻辑（复用 guard.call + 不变量），仅在流式遍历时累积 interrupts
   传给 `_finish_run`
 
 ---
@@ -76,31 +76,31 @@ description: "Task list for 005 streaming fault injection"
 
 ### Tests for US3 ⚠️
 
-- [ ] T008 [P] [US3] 扩展 `tests/integration/test_streaming.py`：`astream_events` 遍历产出
+- [x] T008 [P] [US3] 扩展 `tests/integration/test_streaming.py`：`astream_events` 遍历产出
   事件（on_chain_start/stream/end）；effect 归属正确；RunSegment 结构与 astream 一致
 
 ### Implementation for US3
 
-- [ ] T009 [US3] 在 `adapters/langgraph.py` 新增 `astream_events` 异步生成器，结构与
+- [x] T009 [US3] 在 `adapters/langgraph.py` 新增 `astream_events` 异步生成器，结构与
   `astream` 相同，透传 `version` 参数
 
 ---
 
 ## Phase 4: 文档与示例（Docs & Examples）
 
-- [ ] T010 [P] 新增 `examples/refund/test_refund_streaming.py`：流式退款示例（含 lost-ack
+- [x] T010 [P] 新增 `examples/refund/test_refund_streaming.py`：流式退款示例（含 lost-ack
   检测）
-- [ ] T011 [P] 更新 `docs/quickstart.md`：新增流式用法与注意事项
-- [ ] T012 [P] 更新 `README.md`：能力清单加入流式支持，路线图勾选 005
+- [x] T011 [P] 更新 `docs/quickstart.md`：新增流式用法与注意事项
+- [x] T012 [P] 更新 `README.md`：能力清单加入流式支持，路线图勾选 005
 
 ---
 
 ## Phase 5: 全量验证（Verification）
 
-- [ ] T013 运行 `specs/005-streaming-fault-injection/quickstart.md` 全流程：`pytest tests
+- [x] T013 运行 `specs/005-streaming-fault-injection/quickstart.md` 全流程：`pytest tests
   examples/refund`、`ruff check .`、`mypy src/agentreplayguard`、`coverage report
   --fail-under=90`
-- [ ] T014 核对 001/002/003/004 无回归，确认公开 API 无破坏性变更（仅新增 2 方法）
+- [x] T014 核对 001/002/003/004 无回归，确认公开 API 无破坏性变更（仅新增 2 方法）
 
 ---
 

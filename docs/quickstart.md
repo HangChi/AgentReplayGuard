@@ -239,6 +239,40 @@ assert not scenario.finish().ok
   但**检测结论与分支归属（`branch_id`）是确定的**。
 - 示例见 `examples/refund/graph_parallel.py` 与 `examples/refund/test_refund_parallel.py`。
 
+## 流式接口（astream / astream_events）
+
+用流式方式驱动图时，`LangGraphAdapter` 提供 `astream` / `astream_events`，effect 的归属
+（run/thread/checkpoint/branch）与 `ainvoke` 一致：
+
+```python
+import asyncio
+from agentreplayguard import Scenario
+from agentreplayguard.adapters.langgraph import LangGraphAdapter
+
+scenario = Scenario("stream", seed=0)
+adapter = LangGraphAdapter(scenario, graph)
+
+
+async def main():
+    async for chunk in adapter.astream({"input": ...}):
+        print(chunk)
+    # 或消费事件流
+    async for event in adapter.astream_events({"input": ...}, version="v2"):
+        print(event["event"])
+
+
+asyncio.run(main())
+report = scenario.finish()  # effect 归属与 ainvoke 一致
+```
+
+注意：
+
+- `astream` / `astream_events` 都是异步生成器，必须 `async for` 遍历。
+- 故障注入、重试、`NoDuplicateEffects` / `ConcurrentCommitDetected` 检测在流式下与
+  `ainvoke` 完全等价。
+- 提前 `break` 退出遍历会正常收尾 run，不产生脏状态。
+- 示例见 `examples/refund/test_refund_streaming.py`。
+
 ## pytest fixture
 
 安装后插件自动注册 `replayguard` fixture，等价于 `Scenario` 构造器：
@@ -251,7 +285,7 @@ def test_something(replayguard):
 ## 可运行示例
 
 `examples/refund/` 包含完整示例（lost-ack、幂等键、Checkpoint 恢复、Interrupt 重放、
-并行 fan-out）：
+并行 fan-out、流式）：
 
 ```bash
 uv run pytest examples/refund -q
@@ -264,3 +298,4 @@ uv run pytest examples/refund -q
 - HTTP 传输层契约：[http-transport-api.md](../specs/003-http-fault-transport/contracts/http-transport-api.md)
 - HTTP 传输层验收：[quickstart.md](../specs/003-http-fault-transport/quickstart.md)
 - 并行图分支归属契约：[branch-attribution.md](../specs/004-concurrent-parallel-graph/contracts/branch-attribution.md)
+- 流式入口契约：[streaming-entry.md](../specs/005-streaming-fault-injection/contracts/streaming-entry.md)

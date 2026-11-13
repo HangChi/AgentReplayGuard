@@ -26,9 +26,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/agentreplayguard/agentreplayguard"
-Documentation = "https://github.com/agentreplayguard/agentreplayguard#readme"
-Repository = "https://github.com/agentreplayguard/agentreplayguard"
+Homepage = "https://github.com/HangChi/AgentReplayGuard"
+Documentation = "https://github.com/HangChi/AgentReplayGuard#readme"
+Repository = "https://github.com/HangChi/AgentReplayGuard"
 
 [project.optional-dependencies]
 # 核心包仅标准库；langgraph / httpx / requests / openai-agents 是可选适配层依赖
@@ -54,7 +54,7 @@ agentreplayguard = "agentreplayguard.pytest_plugin"
 packages = ["src/agentreplayguard"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "README.md", "LICENSE", "pyproject.toml"]
+include = ["src", "README.md", "CHANGELOG.md", "LICENSE", "pyproject.toml"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

@@ -12,27 +12,27 @@ description: "Task list for 008 report export"
 
 ## Phase 0: 前置与基线（Setup）
 
-- [ ] T001 `pyproject.toml` 版本 bump 到 0.8.0
-- [ ] T002 运行基线：`pytest -q`、`ruff check .`、`mypy src/agentreplayguard`、`coverage
+- [x] T001 `pyproject.toml` 版本 bump 到 0.8.0
+- [x] T002 运行基线：`pytest -q`、`ruff check .`、`mypy src/agentreplayguard`、`coverage
   --fail-under=90`，记录全绿
 
 ---
 
 ## Phase 1: 报告导出（Priority: P1）🎯
 
-- [ ] T003 [P] 编写 `tests/unit/test_report_export.py`：`to_dict()` 返回可 JSON 序列化 dict
+- [x] T003 [P] 编写 `tests/unit/test_report_export.py`：`to_dict()` 返回可 JSON 序列化 dict
   （Enum 转 value、fault None 保留）；`to_json()` 可 `json.loads` 解析且与 to_dict 一致；空
   报告不报错；同 seed 两次 to_json 逐字节一致；format()/assert_clean() 行为不变
-- [ ] T004 在 `src/agentreplayguard/report.py` 实现 `ScenarioReport.to_dict()` 与
+- [x] T004 在 `src/agentreplayguard/report.py` 实现 `ScenarioReport.to_dict()` 与
   `to_json()`，含 `_to_plain` 递归转换（dataclass → dict、Enum → value、tuple → list）
 
 ---
 
 ## Phase 2: 文档与全量验证（Docs & Verification）
 
-- [ ] T005 [P] 更新 `docs/quickstart.md`：报告导出用法
-- [ ] T006 [P] 更新 `README.md`：能力清单 + 路线图勾选 008
-- [ ] T007 全流程：`pytest tests examples`、`ruff check .`、`mypy src/agentreplayguard`、
+- [x] T005 [P] 更新 `docs/quickstart.md`：报告导出用法
+- [x] T006 [P] 更新 `README.md`：能力清单 + 路线图勾选 008
+- [x] T007 全流程：`pytest tests examples`、`ruff check .`、`mypy src/agentreplayguard`、
   `coverage report --fail-under=90`，核对 001–007 无回归
 
 ---

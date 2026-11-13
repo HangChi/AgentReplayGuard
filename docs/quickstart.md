@@ -358,6 +358,22 @@ def test_something(replayguard):
     scenario = replayguard("my-scenario", seed=0)
 ```
 
+## 报告导出（结构化）
+
+`ScenarioReport` 提供 `to_dict()` / `to_json()`，把报告导出为纯 JSON 可序列化的结构化数据
+（Enum 转 value 字符串），供 CI 存档、审计、跨工具消费：
+
+```python
+report = scenario.finish()
+data = report.to_dict()   # {"scenario_name": ..., "effects": [...], "violations": [...]}
+json_str = report.to_json()  # 确定性 JSON（同 seed 逐字节一致）
+
+import json
+json.loads(json_str)["violations"]  # 结构化消费违规信息
+```
+
+导出与 `format()` 信息内容一致，确定性（字段顺序固定、无 wall clock）。
+
 ## 可运行示例
 
 `examples/refund/` 包含完整示例（lost-ack、幂等键、Checkpoint 恢复、Interrupt 重放、

@@ -48,25 +48,32 @@ fan-out is not supported`。
 
 ## R-03 LangGraph fan-out 的真实执行语义
 
-**决策**：并行分支在 LangGraph 1.2.20 下是「superstep 内确定性顺序调度」，而非真线程并发。
+**决策**：并行分支在 LangGraph 1.2.20 下是**真并发**——同步 fan-out 是线程池真并发，异步
+fan-out 是协程交错。channel 合并顺序稳定 ≠ 节点执行顺序稳定。
 
-**依据（实测）**：对 `a → (b, c) → END` 图（b 有 `time.sleep(0.05)` 制造时序差），同步
-`invoke` 与异步 `ainvoke` 各连跑 5 次，`log` channel（`Annotated[list, operator.add]`）结果
-**全部稳定**为 `['a', 'b', 'c']`——顺序由节点/边注册序决定，不因 sleep 抖动而变。
+**依据（实测，实现阶段修正）**：
+1. 同步 fan-out 节点打印 `threading.get_ident()`，b/c 落在**不同线程**，且执行顺序交错
+   （`b enter → c enter → c exit → b exit`，b sleep 期间 c 已完成）。
+2. 异步 fan-out 节点同线程，但 await 点交错（协程并发）。
+3. **effect 的 `sequence` 顺序在真并发下抖动**：两个并行分支各自 `guard.call` 不同 key，
+   连跑 10 次，`sequence` 顺序在 `[('c',1),('b',2)]` 与 `[('b',1),('c',2)]` 之间交替。
+4. 但 channel reducer 合并顺序（`['b','c']`）**稳定**——这正是最初「顺序调度」误判的来源：
+   `log` 顺序稳定是 reducer 合并的确定性，掩盖了节点真并发执行的事实。
 
-**关键推论**：
-1. 同步 fan-out 下，effect 的 `sequence` / `attempt` / `_call_index` / `LogicalClock` 递增
-   顺序**本就是确定的**（按 b→c 顺序）。因此「允许 fan-out 运行」后，同步路径的确定性
-   无需新机制即可保持。
-2. 不确定性只出现在**真正的并发交错**：异步节点在 await 点交错、或用户用
-   `asyncio.gather` / 多线程手动并发调用 guard。这类交错会让全局计数器递增顺序依赖调度。
-3. 并行分支写同一**无 reducer** 的 channel 会抛 `InvalidUpdateError`（`Annotated` + reducer
-   才合法）——这是 LangGraph 层面的状态冲突，不是 side-effect 层问题，本特性不介入。
+**关键推论（修正）**：
+1. 同步 fan-out 下 effect 的 `sequence`/`attempt`/`_call_index`/`LogicalClock` 递增顺序
+   **依赖调度、不可复现**。但**检测结论不依赖记录顺序**：`NoDuplicateEffects` 用
+   `sorted(effect_ids)` 聚合，`committed_count` 用集合去重，均与追加顺序无关。
+2. 因此「支持 fan-out」后的确定性承诺**收缩**为：
+   - **确定**：branch 归属（来自 `get_config()['metadata']['langgraph_node']`，见 R-05）；
+     检测结论（重复/并发/参数不一致，均排序后判定）；报告输出的违规列表（排序）。
+   - **不确定（须文档标注）**：effect 记录的 `sequence`/`started_tick`/`ended_tick` 追加顺序。
+     这正是宪法第 II 条「并发调度 MUST 标注」的情形。
+3. 并行分支写同一**无 reducer** channel 抛 `InvalidUpdateError`，本特性不介入（原样传播）。
 
-**被否决的方案**：为「真并发」引入全局锁或分布式时钟。理由：宪法第 II 条明确「任何
-引入不确定性的设计 MUST 提供可关闭的确定性路径」，而真线程/真多进程并发本身不确定，
-应通过「并发上下文归属 + 确定性排序」而非「锁」来保证可复现。真多线程并发列为 Out of
-Scope（见 spec）。
+**被否决的方案**：为真并发引入全局锁 / 对记录强制排序。理由：锁改变用户图语义；对记录
+排序放大不确定性且无必要（检测结论本就不依赖顺序）。采纳宪法第 II 条「标注 + 可关闭
+确定性路径」：branch 归属确定、检测结论确定，仅追加顺序不确定并标注。
 
 ---
 
@@ -77,8 +84,8 @@ Scope（见 spec）。
 
 **依据**：严格意义的 linearizability 要求把每个并发操作映射到调用/响应区间内的一个点，
 并证明存在合法串行序——这需要完整的并发历史（含未提交的读操作）。而本工具的 effect 只有
-「提交」这一种可见操作，且 LangGraph fan-out 在当前版本是顺序调度，不存在真实的区间重叠
-（见 R-03）。因此：
+「提交」这一种可见操作，且 LangGraph fan-out 在 1.2.20 是**真并发**（见 R-03），确实存在
+真实的区间重叠。因此：
 
 - **核心可判定目标**（本特性）：识别图结构 fan-out，允许其运行，记录 effect 的**分支归属**，
   新增不变量检测「多个并行分支提交了同一业务键」——这是「并行维度」下的重复副作用，是
@@ -94,35 +101,46 @@ Scope（见 spec）。
 
 ## R-05 effect 分支归属的实现方案
 
-**决策**：引入「并发上下文」把 effect 归属到图节点/分支，扩展 `EffectRecord` 记录该归属。
+**决策**：`EffectGuard` 通过 `langgraph.config.get_config()['metadata']['langgraph_node']`
+读取当前图节点名作为 `branch_id`，扩展 `EffectRecord` 记录该归属。
 
-**依据**：要让「并行重复」可解释（宪法第 VIII 条要求报告能定位），报告必须能回答「这次
-重复是哪个分支造成的」。effect 是在用户节点函数内部通过 `guard.call` 记录的，`EffectGuard`
-本身不知道调用发生在哪个节点。方案：LangGraph 1.2 提供 `langgraph.config.get_config()` 读取
-运行时上下文，但更稳妥的是**线程/协程局部上下文**——在 `_find_fanout` 识别出分支后，为
-每个分支建立确定性 branch_id，通过 contextvar 在分支执行期间注入，`EffectGuard._begin_attempt`
-读取并写入 `EffectRecord`。
+**依据（实测，实现阶段修正）**：effect 是在用户节点函数内部通过 `guard.call` 记录的，
+`EffectGuard` 本身不知道调用发生在哪个节点。实测发现：
+1. `langgraph.config.get_config()` 返回的 `metadata['langgraph_node']` 在**真并发节点内正确
+   隔离**——两个并行节点 b/c 各自 `get_config()['metadata']['langgraph_node']` 分别读到 `'b'`/`'c'`，
+   互不串扰（连跑 3 次均正确）。这比 contextvar 更可靠：contextvar 会被线程池子线程继承
+   父线程值，无法在真线程并发下区分分支。
+2. `get_config()` 是 LangGraph 公开 API（`langgraph.config` 模块），稳定性有保证。
 
 **被否决的方案**：
-1. 通过 `langgraph.config` 运行时读取 node id——依赖 LangGraph 内部实现细节，易随版本漂移，
-   且并发分支的 node id 与 effect 归属并非一一对应（一个 node 可多次调用 guard）。
+1. contextvar 注入——实测父线程 `set` 的值会被线程池子线程继承，真并发下无法区分分支；
+   且适配器无 hook 在「节点执行期间」为每个分支分别 set（同步真线程并发下 set 时机不可控）。
 2. 不记录分支归属，只复用 `NoDuplicateEffects`——丢失「并行 vs 串行重复」的区分能力，
    报告无法定位，违反宪法第 VIII 条。
+
+**注意**：`get_config()` 只应在 `EffectGuard` 内部调用，且必须**降级**——当不在 LangGraph
+运行上下文时（如 HTTP transport 适配器、独立调用 guard），`get_config()` 可能抛异常或返回
+空，`branch_id` 回退为 `None`。核心模块 import `langgraph.config` 会破坏框架隔离（宪法第 V
+条），故通过「可注入的 branch resolver」把框架依赖隔离在适配器层（见 plan）。
 
 ---
 
 ## R-06 确定性策略：并发下的可复现
 
-**决策**：并发上下文按**确定性顺序**分配 branch_id，effect 记录追加顺序保持「图结构序」，
-不依赖真实完成时间排序。
+**决策**：确定性承诺收缩为「branch 归属确定 + 检测结论确定」，effect 记录追加顺序不保证
+确定（文档标注）。
 
-**依据**：R-03 实测证明 LangGraph fan-out 同步/异步均为确定性顺序调度，故「允许运行」后
-同步路径天然确定。异步真并发交错（await 点）场景列为 P3，通过 `started_tick` 区间重叠判定，
-而非对记录重排序——避免引入非确定性的排序逻辑。
+**依据（实测，实现阶段修正）**：真并发下 effect 的 `sequence` 追加顺序抖动（R-03 实测
+`[c,b]`/`[b,c]` 交替）。但：
+- branch 归属来自 `get_config()['metadata']['langgraph_node']`，与调度无关，确定。
+- `NoDuplicateEffects` 的 `commit_identity` 集合、`sorted(effect_ids)`、`committed_count`
+  集合均与追加顺序无关，检测结论确定。
+- `ConcurrentCommitDetected` 的区间重叠判定只依赖 `started_tick`/`ended_tick` 的相对关系，
+  重叠判定结果不依赖记录先后。
 
 **被否决的方案**：按 `ended_tick` 对记录排序保证确定。理由：`ended_tick` 在并发下本身依赖
-调度顺序，用它排序会放大不确定性；应保留「追加即顺序」的简单语义，把并发冲突的判定交给
-区间重叠分析（区间由 `started_tick`/`ended_tick` 表达，两者在并发下仍是单调的）。
+调度顺序，用它排序会放大不确定性；且检测结论本就不依赖顺序，排序纯属多余。保留「追加即
+顺序」的简单语义，把并发冲突判定交给区间重叠分析。
 
 ---
 

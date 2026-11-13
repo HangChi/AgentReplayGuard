@@ -37,15 +37,16 @@ description: "Task list for 004 concurrent/parallel graph race detection"
 
 ## Phase 1: 数据模型（Foundational）
 
-**Purpose**: `branch_id` 字段与分支上下文，是所有故事的基础。
+**Purpose**: `branch_id` 字段与可注入 branch resolver，是所有故事的基础。
 
 - [ ] T004 [P] 编写 `tests/unit/test_effect_branch.py`：`EffectRecord` 含 `branch_id` 字段，
   默认为 `None`，赋值后确定性；序列化/相等性不因字段破坏
-- [ ] T005 [P] 编写 `tests/unit/test_context.py`：`branch_id` contextvar 默认 `None`，set/reset
-  语义正确，嵌套 set 正确恢复
+- [ ] T005 [P] 编写 `tests/unit/test_guard_branch.py`：`EffectGuard` 接受可注入
+  `branch_resolver`，默认 `None`；注入后 `_begin_attempt` 写入 `branch_id`
 - [ ] T006 在 `src/agentreplayguard/effects.py` 的 `EffectRecord` 增加 `branch_id: str | None`
   字段（默认 `None`），并同步 `EffectGuard._record_outcome` 写入
-- [ ] T007 新增 `src/agentreplayguard/context.py`：`branch_id` contextvar 及其默认值
+- [ ] T007 在 `src/agentreplayguard/guard.py` 的 `EffectGuard` 增加可注入 `branch_resolver`
+  参数（默认返回 `None`），`_begin_attempt` 读取并透传到 `_Attempt`
 
 ---
 
@@ -59,15 +60,15 @@ description: "Task list for 004 concurrent/parallel graph race detection"
 ### Tests for US1 ⚠️
 
 - [ ] T008 [P] [US1] 编写 `tests/integration/test_parallel_graph.py`：fan-out 图
-  `strict_graph=True` 下 `invoke` 成功；两分支 effect `branch_id` 分别为 b/c；串行图
-  `branch_id is None`；同 seed 连跑 20 次 branch_id 一致
+  `strict_graph=True` 下 `invoke` 成功；两分支 effect `branch_id` 分别为 b/c（节点名）；串行图
+  `branch_id is None`；连跑 20 次检测结论与 branch_id 归属一致
 - [ ] T009 [P] [US1] 编写 `tests/contract/test_branch_attribution.py`：`EffectRecord.branch_id`
   公开可见；`strict_graph` 语义（True 支持 fan-out、False 仅警告）符合 FR-008
 
 ### Implementation for US1
 
-- [ ] T010 [US1] 改造 `src/agentreplayguard/adapters/langgraph.py`：`_find_fanout` 不再拒绝，
-  改为建立确定性分支映射；`_run`/`_arun` 在执行期间注入 contextvar `branch_id`
+- [ ] T010 [US1] 改造 `src/agentreplayguard/adapters/langgraph.py`：`_find_fanout` 不再拒绝；
+  构造时注入读 `get_config()['metadata']['langgraph_node']` 的 branch resolver 到 Scenario
 - [ ] T011 [US1] `_validate_graph` 调整：`strict_graph=True` 时 fan-out 合法；保留
   `strict_graph=False` 的警告路径
 
@@ -134,15 +135,17 @@ effect_ids 两条分支归属不同。
   examples/refund`、`ruff check .`、`mypy src/agentreplayguard`、`coverage report
   --fail-under=90`
 - [ ] T023 核对 001/002/003 无回归（串行图行为不变），确认公开 API 无破坏性变更
-- [ ] T024 确定性回归：同 seed 连跑 20 次 fan-out 场景，effect 记录与 branch_id 20/20 一致
+- [ ] T024 确定性回归：连跑 20 次 fan-out 场景，检测结论与 branch_id 归属 20/20 一致
+  （effect 追加 sequence 顺序可抖动，不断言）
 
 ---
 
 ## Notes（贯穿全清单的硬约束）
 
-- **确定性**：branch_id 分配、记录顺序、报告输出必须只依赖「图结构 + seed」，不依赖运行时
-  调度（宪法第 II 条）。
+- **确定性**：branch_id 归属、检测结论（重复/并发/参数不一致）必须只依赖「图结构」，与
+  调度无关；effect 追加 `sequence`/tick 顺序在真并发下可抖动（宪法第 II 条「并发调度标注」）。
 - **框架隔离**：`effects.py`/`guard.py`/`invariants.py`/`report.py` 不得 import langgraph；
-  归属注入只在 `adapters/langgraph.py` + `context.py`。
-- **无新依赖**：仅用标准库 `contextvars`，不新增第三方依赖。
-- **真并发不做**：任何任务不得引入 threading/多进程并发支持（Out of Scope）。
+  分支归属通过可注入 resolver 隔离，框架依赖只在 `adapters/langgraph.py`。
+- **无新依赖**：仅用标准库，不新增第三方依赖。
+- **真线程并发已支持**：同步 fan-out 本身就是线程池并发（实测），本特性支持它而非排除；
+  但**多进程**并发仍 Out of Scope。

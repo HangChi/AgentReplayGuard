@@ -122,10 +122,11 @@ effect 记录能区分出属于 b 分支还是 c 分支。
 
 - **FR-001**: 适配器 MUST 识别图结构中的 fan-out（一个节点有 >1 条无条件出边），并允许其
   运行，不再默认抛 `UnsupportedGraphError`。
-- **FR-002**: 系统 MUST 为 fan-out 的每个分支分配一个确定性的 `branch_id`，并在该分支
-  执行期间通过上下文把 `branch_id` 注入 `EffectGuard`，写入 `EffectRecord`。
-- **FR-003**: `EffectRecord` MUST 新增 `branch_id` 字段（串行图/默认值为空或哨兵值），
-  该字段 MUST 确定性可复现（同一 seed/图结构下一致）。
+- **FR-002**: 系统 MUST 通过 `langgraph.config.get_config()['metadata']['langgraph_node']`
+  获取当前图节点作为分支归属，并在分支执行期间注入 `EffectGuard`，写入 `EffectRecord`。
+  不在 LangGraph 上下文时（HTTP 适配器/独立调用）回退为 `None`。
+- **FR-003**: `EffectRecord` MUST 新增 `branch_id` 字段（串行图/默认值为 `None`），
+  该字段 MUST 确定性可复现（同一图结构下，与节点名一致，与调度无关）。
 - **FR-004**: `NoDuplicateEffects` 不变量 MUST 在并行重复场景下报告 `duplicate_effects`，
   且报告能指出违规 effect 的分支归属差异（同一业务键来自不同分支）。
 - **FR-005**: 系统 MUST 提供一种判定「两个 effect 是否并发」的机制，基于
@@ -133,11 +134,13 @@ effect 记录能区分出属于 b 分支还是 c 分支。
 - **FR-006**: 报告（`ScenarioReport` 与 `format()`）MUST 包含 effect 的 `branch_id` 信息，
   且输出保持确定性（无 wall clock、无内存地址）。
 - **FR-007**: 核心模块（guard/effects/scenario/invariants/report）MUST 保持不 import
-  LangGraph（框架隔离，宪法第 V 条）；分支归属注入由适配器层完成。
+  LangGraph（框架隔离，宪法第 V 条）；分支归属通过「可注入的 branch resolver」完成，
+  框架依赖隔离在适配器层。
 - **FR-008**: `strict_graph` 参数的语义 MUST 明确化：`True`（默认）= 识别并支持 fan-out；
   `False` = 关闭 fan-out 相关增强（仅保留警告）。不得再出现「True 拒绝运行」的行为。
-- **FR-009**: 同步与异步路径（`invoke`/`ainvoke`）对 fan-out 的 effect 记录数与归属
-  分配 MUST 一致（同一 seed 下）。
+- **FR-009**: 同步与异步路径（`invoke`/`ainvoke`）对 fan-out 的 effect **检测结论与
+  branch 归属** MUST 一致（同一图结构下）。effect 追加 `sequence` 顺序因真并发可抖动，
+  不作为一致性断言。
 - **FR-010**: 既有串行图、retry/checkpoint/interrupt 的检测行为 MUST 完全不变（回归）。
 - **FR-011**: 并行分支写同一无 reducer channel 导致的 `InvalidUpdateError` MUST 原样传播，
   工具不得吞掉或改写。
@@ -155,7 +158,8 @@ effect 记录能区分出属于 b 分支还是 c 分支。
 ### Measurable Outcomes
 
 - **SC-001**: 一个 `a → (b, c) → END` 的 fan-out 图在 `strict_graph=True` 下 `invoke` 成功，
-  且连跑 20 次（同 seed）effect 记录与 branch_id 归属完全一致（20/20）。
+  且连跑 20 次（同 seed）**检测结论与 branch 归属**完全一致（20/20）。effect 记录的追加
+  `sequence` 顺序因真并发可抖动，不纳入确定性断言（见 research R-03/R-06）。
 - **SC-002**: 并行分支提交同一业务键（无幂等键）时，`NoDuplicateEffects` 检测到
   `duplicate_effects` 且 `actual=2`。
 - **SC-003**: 同一并行重复场景在有相同幂等键时 `committed_count=1`、`ok=True`。
@@ -169,8 +173,10 @@ effect 记录能区分出属于 b 分支还是 c 分支。
 
 ## Out of Scope
 
-- **真线程 / 多进程并发**：`threading` / 多进程并发调用 guard 的竞态与线性化，不做（宪法
-  第 II 条，真并发不确定，仅提供「异步交错」这一可判定子集，见 US3）。
+- **多进程并发**：`multiprocessing` / 跨进程调用 guard 的竞态与线性化，不做。同步 fan-out 的
+  **线程池并发**（LangGraph 内部实现）是本特性的天然输入，予以支持（见 research R-03）；
+  用户**手动**用 `threading` 起的线程直接并发调用 guard 的确定性不在承诺范围，但检测结论
+  仍由排序后判定保证确定。
 - **完整并发历史线性化算法**（Wing & Gong 等）：无读操作语义，价值不匹配（见 research R-04）。
 - **流式接口**（`astream`/`astream_events`）的并发故障注入：属独立特性，不在本阶段。
 - **其他框架适配器**（CrewAI/AutoGen/OpenAI Agents SDK）：独立特性，宪法第 VI 条按需新增。
@@ -183,12 +189,13 @@ effect 记录能区分出属于 b 分支还是 c 分支。
 
 ## Assumptions
 
-- LangGraph 受支持版本为 1.2.x（与既有 `[langgraph]` extra 范围一致），fan-out 的同步/异步
-  执行顺序均为确定性顺序调度（实测 1.2.20，见 research R-03）。
+- LangGraph 受支持版本为 1.2.x（与既有 `[langgraph]` extra 范围一致）。fan-out 是**真并发**
+  （同步=线程池、异步=协程交错，实测 1.2.20，见 research R-03），故 effect 追加顺序不保证
+  确定，但检测结论与 branch 归属确定。
 - 并行分支的 channel 写由用户用 `Annotated` reducer 或不同 channel 保证合法；状态层冲突
   是用户职责，工具不介入。
-- 分支归属用 contextvar 注入，基于「fan-out 识别 → 分支确定性编号」实现，不依赖 LangGraph
-  内部运行时 API。
+- 分支归属通过 `langgraph.config.get_config()` 的 `metadata['langgraph_node']` 获取，经
+  「可注入的 branch resolver」隔离框架依赖；不在 LangGraph 上下文时回退 `None`。
 - effect 记录仍只落本地内存，默认不上传不联网（宪法第 III 条）。
 - 本特性的证据来源为竞品调研（research R-02）与「并行是重复副作用独立来源」的工程事实；
   无真实用户反馈（用户选择由 agent 补竞品调研，宪法第 I 条允许「竞品能力缺口」类证据）。

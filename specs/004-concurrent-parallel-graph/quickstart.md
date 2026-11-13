@@ -25,13 +25,13 @@ def make_graph(scenario: Scenario):
     guard = scenario.guard()
 
     def notify(s):
-        # 分支 b：退款订单 ORDER-1
-        guard.call("refund", lambda: None, key="ORDER-1")
+        # 分支 notify：退款订单 ORDER-1
+        guard.call("refund", lambda: None, key=lambda _: "ORDER-1")
         return {"log": ["notify"]}
 
     def deduct(s):
-        # 分支 c：也退款订单 ORDER-1（缺陷：应只退一次）
-        guard.call("refund", lambda: None, key="ORDER-1")
+        # 分支 deduct：也退款订单 ORDER-1（缺陷：应只退一次）
+        guard.call("refund", lambda: None, key=lambda _: "ORDER-1")
         return {"log": ["deduct"]}
 
     def start(s):
@@ -72,13 +72,13 @@ uv run mypy src/agentreplayguard
 # 覆盖率（核心模块 ≥90%）
 uv run coverage run -m pytest -q && uv run coverage report --fail-under=90
 
-# 确定性回归：同 seed 连跑 20 次，结论一致
+# 确定性回归：同图结构连跑 20 次，检测结论与分支归属一致
 uv run pytest tests/integration/test_parallel_graph.py -k deterministic -q
 ```
 
 ## 报告长什么样（预期）
 
-并行重复场景下，`NoDuplicateEffects` 报违规，effect 行带 `branch_id` 定位分支来源：
+并行重复场景下，`NoDuplicateEffects` 报违规，effect 行带 `branch_id`（节点名）定位分支来源：
 
 ```
 duplicate_effects: refund ORDER-1 committed 2 times
@@ -86,8 +86,12 @@ duplicate_effects: refund ORDER-1 committed 2 times
   effect eff-000002  branch=deduct
 ```
 
+> 注意：并行分支的 effect 追加顺序（`sequence`）因真并发可能抖动，`eff-000001` 到底属于
+> notify 还是 deduct 不保证，但「两条记录 branch 分别为 notify/deduct」是确定的。
+
 ## 注意
 
 - 并行分支写同一 channel 必须用 `Annotated` + reducer，否则 LangGraph 抛
   `InvalidUpdateError`（这是图设计问题，工具不介入）。
-- 真线程 / 多进程并发不在支持范围；异步并发用「区间重叠」判定（见 spec US3）。
+- 同步 fan-out 是 LangGraph 线程池真并发，effect 追加顺序不保证确定；但检测结论与分支
+  归属确定。多进程并发不在支持范围。

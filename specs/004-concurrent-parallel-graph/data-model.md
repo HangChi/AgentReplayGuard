@@ -14,25 +14,26 @@
 branch_id: str | None
 ```
 
-- 语义：该 effect 由哪个并行分支提交；`None` 表示串行上下文（无 fan-out）或非图执行的
-  独立 guarded 调用。
+- 语义：该 effect 由哪个图节点（分支）提交；`None` 表示非 LangGraph 上下文（串行图外的
+  独立 guarded 调用、HTTP 适配器等）。
 - 取值规则（确定性）：
-  - 串行图 / 非 fan-out 区间：`None`
-  - fan-out 区间内：`"b"`、`"c"` 这类分支短标识（见 BranchContext）
-  - 嵌套 fan-out：层级表达（如 `"b.1"`），保证叶子分支唯一
-- 约束：同一图结构 + 同 seed 下，`branch_id` 的赋值完全一致（FR-003 / SC-001）。
+  - 串行图 / 非 LangGraph 上下文：`None`
+  - LangGraph 上下文：当前节点名（`metadata['langgraph_node']`），如 `"notify"`、`"deduct"`
+- 约束：同一图结构下，`branch_id` 的赋值完全一致（与调度无关，FR-003 / SC-001）。
 
-### 2. `BranchContext`（新增，`src/agentreplayguard/context.py`）
+### 2. `branch_resolver`（新增可注入回调）
 
-一个 contextvar 包装器，用于在分支执行期间注入 `branch_id`：
+一个可注入的 `Callable[[], str | None]`，用于在 effect 记录时获取当前分支归属：
 
 ```
-branch_id: ContextVar[str | None] = ContextVar("branch_id", default=None)
+EffectGuard._branch_resolver: Callable[[], str | None]
 ```
 
-- 由适配器在分支执行前 `set`，执行后 `reset`；`EffectGuard._begin_attempt` 读取当前值。
-- 因 LangGraph fan-out 是顺序调度（无真并发），单 contextvar 即足够表达「当前分支」。
-- 核心模块通过读 contextvar 而非 import 适配器，保持框架隔离（宪法第 V 条）。
+- 默认返回 `None`（串行/独立调用/HTTP 适配器）。
+- `LangGraphAdapter` 构造时注入「读 `langgraph.config.get_config()['metadata']['langgraph_node']`」
+  的 resolver，从而把框架依赖隔离在适配器层（核心模块不 import LangGraph，宪法第 V 条）。
+- `EffectGuard._begin_attempt` 调用 resolver 写入 `EffectRecord.branch_id`。
+- resolver 在真并发节点内正确隔离（`get_config` 按 task 上下文返回各自节点名，实测 R-05）。
 
 ### 3. `ConcurrentCommitDetected`（新增不变量，`src/agentreplayguard/invariants.py`）
 

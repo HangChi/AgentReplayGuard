@@ -78,43 +78,58 @@ specs/004-concurrent-parallel-graph/
 ```
 src/agentreplayguard/
 ├── effects.py           # EffectRecord 增加 branch_id 字段
-├── context.py           # 新增：BranchContext contextvar 管理
+├── guard.py             # 增加可注入 branch_resolver，写入 branch_id
 ├── invariants.py        # 新增 ConcurrentCommitDetected 不变量
-├── adapters/langgraph.py# fan-out 识别 + 分支上下文注入
+├── adapters/langgraph.py# fan-out 识别 + 注入 get_config 节点名 resolver
 └── report.py            # 报告含 branch_id（若需 format 扩展）
 ```
+
+（不再新增 `context.py`；分支归属经可注入 resolver 实现，见设计要点 2。）
 
 ## 设计要点
 
 ### 1. fan-out 识别（沿用 `_find_fanout`，语义反转）
 
 `_find_fanout()` 已能返回「有 >1 条无条件出边的 source 节点列表」。本特性把「发现即拒绝」
-改为「发现即建立分支映射」。需要额外的图遍历来为每条出边确定 `branch_id`。
+改为「发现即允许」。`strict_graph` 语义反转：`True`（默认）= 识别并支持 fan-out；
+`False` = 保留旧警告路径（仍可运行，仅提示）。
 
-### 2. 确定性 branch_id 分配
+### 2. 分支归属：`get_config()` 而非 contextvar
 
-对 fan-out 节点，按 `get_graph().edges` 的**注册顺序**（`source, target` 字典序或注册序）为
-每条出边目标分配 `branch_id`。分支编号必须稳定（同一图结构下一致），避免依赖运行时顺序。
+实测（research R-03/R-05）：同步 fan-out 是线程池真并发，父线程 contextvar 会被子线程继承，
+无法区分分支。正确来源是 `langgraph.config.get_config()['metadata']['langgraph_node']`，
+在真并发节点内正确隔离。为保持核心模块不 import LangGraph（宪法第 V 条），通过「可注入的
+branch resolver」隔离框架依赖：
 
-### 3. contextvar 注入
+- 核心层：`EffectGuard` 持有 `branch_resolver: Callable[[], str | None]`，默认返回 `None`。
+- 适配器层：`LangGraphAdapter` 在构造时把「读 `get_config()` 节点名」的 resolver 注入 Scenario，
+  再传入 guard。
+- `EffectGuard._begin_attempt` 调 `branch_resolver()` 写入 `EffectRecord.branch_id`。
 
-标准库 `contextvars.ContextVar`。适配器在 `invoke`/`ainvoke` 期间，为每个分支设置对应的
-`branch_id`。因 LangGraph fan-out 是顺序调度（无真并发），单 contextvar 即可表达「当前正在
-执行的分支」。`EffectGuard._begin_attempt` 读取当前 contextvar 值写入 `EffectRecord.branch_id`。
+### 3. 分支归属的确定性
+
+`branch_id` = 当前图节点名，由 `metadata['langgraph_node']` 提供，与调度无关，确定。
 
 ### 4. 并发提交判定
 
 `started_tick`/`ended_tick` 已是单调逻辑时钟。区间重叠判定：两条 COMMITTED 记录同
 business_key 且 `[started, ended]` 区间相交（`a.started < b.ended and b.started < a.ended`）即
-为并发。不变量 `ConcurrentCommitDetected` 复用此判定。
+为并发。不变量 `ConcurrentCommitDetected` 复用此判定。注意：判定结果与记录追加顺序无关，
+保证检测结论确定。
 
-### 5. 复杂度跟踪（Complexity Tracking）
+### 5. 确定性承诺（收缩）
+
+真并发下 effect 追加 `sequence`/`started_tick`/`ended_tick` 顺序不可复现（宪法第 II 条
+「并发调度 MUST 标注」情形）。确定性承诺收缩为：branch 归属确定 + 检测结论确定（重复/并发/
+参数不一致均排序后判定）。报告违规列表排序输出。
+
+### 6. 复杂度跟踪（Complexity Tracking）
 
 | 复杂度 | 说明 | 更简单方案为何被否决 |
 |--------|------|----------------------|
-| 新增 `context.py` 与 contextvar | 分支归属注入 | 用 `langgraph.config` 读运行时 node id（R-05 否决）：依赖内部实现，易漂移；contextvar 是标准库且框架无关 |
-| 图遍历确定 branch_id | 分支确定性编号 | 用执行时顺序（R-06 否决）：依赖调度，不确定 |
-| 区间重叠判定 | 并发提交检测 | 对记录重排序（R-06 否决）：放大不确定性；区间判定保持「追加即顺序」简单语义 |
+| 新增可注入 branch resolver | 分支归属注入 | contextvar 注入（R-05 否决）：真线程并发下父值被子线程继承，无法区分分支 |
+| 复用 `get_config()` 节点名 | branch_id 来源 | 图遍历确定编号（R-06 否决）：编号无法在「节点函数内部」对应到具体执行分支；节点名天然稳定且并发隔离 |
+| 区间重叠判定 | 并发提交检测 | 对记录重排序（R-06 否决）：放大不确定性且检测结论本不依赖顺序 |
 
 ## 阶段划分
 

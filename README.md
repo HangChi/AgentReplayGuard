@@ -34,6 +34,7 @@ AI Agent 调用有副作用的工具时，失败语义与普通函数不同：
 - [x] 多框架工具副作用记账（[007 规格](specs/007-multi-framework-tools/spec.md)）
 - [x] 报告结构化导出（[008 规格](specs/008-report-export/spec.md)）
 - [x] 流式响应体丢失语义（[009 规格](specs/009-stream-body-loss/spec.md)）
+- [x] 同步 stream 入口（[010 规格](specs/010-sync-stream/spec.md)）
 - [x] Phase 5 开源发布（[GitHub 仓库](https://github.com/HangChi/AgentReplayGuard)、[v0.1.0 Release](https://github.com/HangChi/AgentReplayGuard/releases/tag/v0.1.0)）
 
 ## 快速开始
@@ -54,7 +55,7 @@ uv run pytest examples/refund -q
 | Fault Injector | 六类故障（提交前超时、提交后响应丢失、连接重置、500、部分成功、流式响应体丢失），固定 seed |
 | Simulated Service | 退款账本 + 幂等键开关 |
 | Invariant Checker | `no_duplicate_effects`、`max_effect_count`、`concurrent_commit`、自定义 predicate |
-| LangGraph Adapter | 驱动 RetryPolicy / resume / interrupt / astream，支持同步/异步与并行 fan-out，记录节点分支归属 |
+| LangGraph Adapter | 驱动 RetryPolicy / resume / interrupt / stream / astream，支持同步/异步与并行 fan-out，记录节点分支归属 |
 | HTTP Transport Adapter | 包裹 httpx 同步/异步 transport 与 requests adapter，业务代码零改动地记账并注入 lost-ack |
 
 ## 许可

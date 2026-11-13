@@ -274,10 +274,10 @@ assert not scenario.finish().ok
   但**检测结论与分支归属（`branch_id`）是确定的**。
 - 示例见 `examples/refund/graph_parallel.py` 与 `examples/refund/test_refund_parallel.py`。
 
-## 流式接口（astream / astream_events）
+## 流式接口（stream / astream / astream_events）
 
-用流式方式驱动图时，`LangGraphAdapter` 提供 `astream` / `astream_events`，effect 的归属
-（run/thread/checkpoint/branch）与 `ainvoke` 一致：
+用流式方式驱动图时，`LangGraphAdapter` 提供同步 `stream` 与异步 `astream` / `astream_events`，
+effect 的归属（run/thread/checkpoint/branch）与 `invoke` / `ainvoke` 一致：
 
 ```python
 import asyncio
@@ -287,7 +287,12 @@ from agentreplayguard.adapters.langgraph import LangGraphAdapter
 scenario = Scenario("stream", seed=0)
 adapter = LangGraphAdapter(scenario, graph)
 
+# 同步流式
+for chunk in adapter.stream({"input": ...}):
+    print(chunk)
 
+
+# 异步流式
 async def main():
     async for chunk in adapter.astream({"input": ...}):
         print(chunk)
@@ -297,15 +302,17 @@ async def main():
 
 
 asyncio.run(main())
-report = scenario.finish()  # effect 归属与 ainvoke 一致
+report = scenario.finish()  # effect 归属与 invoke/ainvoke 一致
 ```
 
 注意：
 
-- `astream` / `astream_events` 都是异步生成器，必须 `async for` 遍历。
+- `stream` 是同步生成器（`for` 遍历）；`astream` / `astream_events` 是异步生成器（`async for`）。
 - 故障注入、重试、`NoDuplicateEffects` / `ConcurrentCommitDetected` 检测在流式下与
-  `ainvoke` 完全等价。
+  `invoke` / `ainvoke` 完全等价。
 - 提前 `break` 退出遍历会正常收尾 run，不产生脏状态。
+- 同步 `stream_events` 不在支持范围（LangGraph 的 v2 事件流仅异步可用，v3 为实验性），
+  事件流请用 `astream_events`。
 - 示例见 `examples/refund/test_refund_streaming.py`。
 
 ## 其他 Agent 框架（工具函数级接入）

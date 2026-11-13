@@ -36,6 +36,7 @@ AI Agent 调用有副作用的工具时，失败语义与普通函数不同：
 - [x] 流式响应体丢失语义（[009 规格](specs/009-stream-body-loss/spec.md)）
 - [x] 同步 stream 入口（[010 规格](specs/010-sync-stream/spec.md)）
 - [x] CI 报告格式（JUnit XML）（[011 规格](specs/011-junit-report/spec.md)）
+- [x] 更多模拟服务模板（订单/邮件/库存）（[012 规格](specs/012-more-simulated-services/spec.md)）
 - [x] Phase 5 开源发布（[GitHub 仓库](https://github.com/HangChi/AgentReplayGuard)、[v0.1.0 Release](https://github.com/HangChi/AgentReplayGuard/releases/tag/v0.1.0)）
 
 ## 快速开始
@@ -54,7 +55,7 @@ uv run pytest examples/refund -q
 |------|------|
 | Effect Store | 记录每次副作用尝试：类型、业务键、参数哈希、尝试序号、提交状态、run/thread/checkpoint、branch |
 | Fault Injector | 六类故障（提交前超时、提交后响应丢失、连接重置、500、部分成功、流式响应体丢失），固定 seed |
-| Simulated Service | 退款账本 + 幂等键开关 |
+| Simulated Service | 退款/订单/邮件/库存四类模拟服务：内存账本 + 幂等键开关（参考实现，供仿照接入） |
 | Invariant Checker | `no_duplicate_effects`、`max_effect_count`、`concurrent_commit`、自定义 predicate |
 | LangGraph Adapter | 驱动 RetryPolicy / resume / interrupt / stream / astream，支持同步/异步与并行 fan-out，记录节点分支归属 |
 | HTTP Transport Adapter | 包裹 httpx 同步/异步 transport 与 requests adapter，业务代码零改动地记账并注入 lost-ack |

@@ -43,6 +43,12 @@ class StreamGraph:
     def get_graph(self):
         return _edges()
 
+    def stream(self, input, config, **kwargs):
+        for chunk in self._chunks:
+            if self._fail_on == "first":
+                raise ValueError("boom")
+            yield chunk
+
     async def astream(self, input, config, **kwargs):
         for chunk in self._chunks:
             if self._fail_on == "first":
@@ -66,6 +72,9 @@ class SyncOnlyGraph:
 
     def get_graph(self):
         return _edges()
+
+    def stream(self, input, config, **kwargs):
+        yield {"a": {}}
 
 
 async def _drain(agen):
@@ -161,3 +170,72 @@ def test_astream_events_creates_segment():
     report = scenario.finish()
     assert len(report.run_segments) == 1
     assert report.run_segments[0].run_id == "run-0001"
+
+
+def _drain_sync(gen):
+    return list(gen)
+
+
+def test_stream_creates_start_segment():
+    scenario = Scenario("s")
+    adapter = LangGraphAdapter(
+        scenario, StreamGraph(chunks=[{"a": {"x": 1}}, {"b": {"x": 2}}])
+    )
+
+    chunks = _drain_sync(adapter.stream({"x": 0}))
+
+    assert chunks == [{"a": {"x": 1}}, {"b": {"x": 2}}]
+    report = scenario.finish()
+    assert len(report.run_segments) == 1
+    assert report.run_segments[0].input_kind is RunInputKind.START
+    assert report.run_segments[0].run_id == "run-0001"
+
+
+def test_stream_effect_attributed_to_run():
+    scenario = Scenario("s")
+
+    class GraphWithGuard(StreamGraph):
+        def stream(self, input, config, **kwargs):
+            scenario.guard().call("refund", lambda: None, key=lambda _: "R-1")
+            yield {"a": {}}
+
+    adapter = LangGraphAdapter(scenario, GraphWithGuard())
+    _drain_sync(adapter.stream({}))
+
+    record = scenario.effects.records[0]
+    assert record.run_id == "run-0001"
+    assert record.checkpoint_id == "cp-1"
+
+
+def test_stream_does_not_require_ainvoke():
+    """同步 stream 不要求 ainvoke 能力（SyncOnlyGraph 无 ainvoke）。"""
+    scenario = Scenario("s")
+    adapter = LangGraphAdapter(scenario, SyncOnlyGraph())
+
+    chunks = _drain_sync(adapter.stream({}))
+    assert chunks == [{"a": {}}]
+    assert len(scenario.finish().run_segments) == 1
+
+
+def test_stream_mid_exception_finishes_run_and_propagates():
+    scenario = Scenario("s")
+    adapter = LangGraphAdapter(scenario, StreamGraph(chunks=[{}], fail_on="first"))
+
+    with pytest.raises(ValueError):
+        _drain_sync(adapter.stream({}))
+
+    report = scenario.finish()
+    assert len(report.run_segments) == 1
+    assert report.run_segments[0].error_type == "ValueError"
+
+
+def test_stream_early_break_finishes_run():
+    scenario = Scenario("s")
+    adapter = LangGraphAdapter(scenario, StreamGraph(chunks=[{"a": {}}, {"b": {}}]))
+
+    for _chunk in adapter.stream({}):
+        break
+
+    report = scenario.finish()
+    assert len(report.run_segments) == 1
+    assert report.run_segments[0].error_type is None

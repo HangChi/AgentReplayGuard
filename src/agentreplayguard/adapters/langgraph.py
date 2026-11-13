@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Iterator, Mapping
 from typing import Any, cast
 
 from langgraph.types import Command
@@ -93,6 +93,38 @@ class LangGraphAdapter:
 
     def state(self) -> Any:
         return self._graph.get_state(self._config())
+
+    def stream(
+        self,
+        input: Mapping[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> Iterator[Any]:
+        """同步流式驱动图，逐 chunk 产出，effect 正确归属 run/thread/checkpoint/branch。"""
+        checkpoint_before = self._checkpoint_id()
+        run_id = self._scenario._begin_run(self._thread_id, checkpoint_before)
+        started_tick = self._scenario._tick()
+
+        interrupts: tuple[Any, ...] = ()
+        exc: BaseException | None = None
+        try:
+            for chunk in self._graph.stream(input, self._config(), **kwargs):
+                interrupts = interrupts + self._extract_interrupts_from_chunk(chunk)
+                yield chunk
+        except BaseException as caught:
+            # GeneratorExit 是提前退出（break），属正常收尾，不记为错误。
+            if not isinstance(caught, GeneratorExit):
+                exc = caught
+            raise
+        finally:
+            self._finish_run(
+                run_id=run_id,
+                input_kind=RunInputKind.START,
+                checkpoint_before=checkpoint_before,
+                started_tick=started_tick,
+                output=None,
+                interrupts=interrupts,
+                exc=exc,
+            )
 
     async def astream(
         self,

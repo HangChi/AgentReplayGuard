@@ -158,3 +158,43 @@ def test_stream_mode_transparent():
     assert len(chunks) == 2
     records = scenario.effects.records
     assert len(records) == 2
+
+
+def test_sync_stream_branch_attribution():
+    """同步 stream 与 astream 一样正确归属 branch。"""
+    scenario = Scenario("s", seed=0)
+    adapter = LangGraphAdapter(scenario, _make_serial_graph(scenario))
+
+    chunks = list(adapter.stream({"log": []}))
+
+    assert len(chunks) == 2
+    records = scenario.effects.records
+    assert {r.branch_id for r in records} == {"a", "b"}
+    assert {r.run_id for r in records} == {"run-0001"}
+
+
+def test_sync_stream_vs_astream_parity():
+    """同步 stream 与异步 astream 的 effect 记录数/状态/attempt/branch 一致。"""
+
+    def run_stream():
+        sc = Scenario("s", seed=0)
+        ad = LangGraphAdapter(sc, _make_serial_graph(sc))
+        list(ad.stream({"log": []}))
+        return sc.effects.records
+
+    async def run_astream():
+        sc = Scenario("s", seed=0)
+        ad = LangGraphAdapter(sc, _make_serial_graph(sc))
+        await _drain(ad.astream({"log": []}))
+        return sc.effects.records
+
+    stream_records = run_stream()
+    astream_records = asyncio.run(run_astream())
+
+    def fingerprint(records):
+        return sorted(
+            (r.effect_type, r.business_key, r.attempt, r.status.value, r.branch_id)
+            for r in records
+        )
+
+    assert fingerprint(stream_records) == fingerprint(astream_records)

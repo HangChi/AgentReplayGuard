@@ -83,15 +83,15 @@ effect_ids 两条分支归属不同。
 
 ### Tests for US2 ⚠️
 
-- [ ] T012 [P] [US2] 扩展 `tests/integration/test_parallel_graph.py`：两分支同 key（无幂等键）
+- [x] T012 [P] [US2] 扩展 `tests/integration/test_parallel_graph.py`：两分支同 key（无幂等键）
   报 `duplicate_effects` 且 branch_id 不同；同 key + 相同幂等键 `committed_count=1`；同 key +
   相同幂等键 + 不同参数报 `parameter_mismatch`
-- [ ] T013 [P] [US2] 编写 `tests/unit/test_invariants_parallel.py`：`NoDuplicateEffects` 在带
+- [x] T013 [P] [US2] 编写 `tests/unit/test_invariants_parallel.py`：`NoDuplicateEffects` 在带
   `branch_id` 的记录上仍正确去重，报告能区分分支
 
 ### Implementation for US2
 
-- [ ] T014 [US2] 确认 `NoDuplicateEffects` 无需改动即可检测并行重复（去重口径与 branch_id
+- [x] T014 [US2] 确认 `NoDuplicateEffects` 无需改动即可检测并行重复（去重口径与 branch_id
   无关）；仅在报告/违规信息中补充 branch_id 定位（如 `report.py` 的 effect 行输出）
 
 ---
@@ -105,17 +105,17 @@ effect_ids 两条分支归属不同。
 
 ### Tests for US3 ⚠️
 
-- [ ] T015 [P] [US3] 编写 `tests/unit/test_concurrent_commit.py`：区间重叠判定正确（相交/相离/
+- [x] T015 [P] [US3] 编写 `tests/unit/test_concurrent_commit.py`：区间重叠判定正确（相交/相离/
   相邻边界）；`ConcurrentCommitDetected` 对 gather 并发同 key 报违规、顺序执行不报、不同 key
   不报
-- [ ] T016 [P] [US3] 扩展 `tests/contract/test_branch_attribution.py`：`ConcurrentCommitDetected`
+- [x] T016 [P] [US3] 扩展 `tests/contract/test_branch_attribution.py`：`ConcurrentCommitDetected`
   公开签名与既有不变量风格一致
 
 ### Implementation for US3
 
-- [ ] T017 [US3] 在 `src/agentreplayguard/invariants.py` 新增 `ConcurrentCommitDetected`，
+- [x] T017 [US3] 在 `src/agentreplayguard/invariants.py` 新增 `ConcurrentCommitDetected`，
   复用 `started_tick`/`ended_tick` 区间重叠判定
-- [ ] T018 [US3] 新增区间重叠判定工具（可放 invariants 内部或独立纯函数），含边界语义注释
+- [x] T018 [US3] 新增区间重叠判定工具（可放 invariants 内部或独立纯函数），含边界语义注释
 
 ---
 

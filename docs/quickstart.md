@@ -7,10 +7,10 @@ effect 账本，验证重试、Checkpoint 恢复与 Interrupt 重放不会重复
 ## 安装
 
 ```bash
-uv sync --extra dev --extra langgraph --extra httpx
+uv sync --extra dev --extra langgraph --extra httpx --extra requests --extra agents
 ```
 
-- 核心包仅依赖标准库；`langgraph` 与 `httpx` 是可选适配层依赖。
+- 核心包仅依赖标准库；`langgraph`、`httpx`、`requests`、`openai-agents` 是可选适配层依赖。
 - 运行测试不需要网络，也无需任何真实支付/退款/邮件服务。
 
 ## 最小示例
@@ -306,6 +306,49 @@ report = scenario.finish()  # effect 归属与 ainvoke 一致
 - 提前 `break` 退出遍历会正常收尾 run，不产生脏状态。
 - 示例见 `examples/refund/test_refund_streaming.py`。
 
+## 其他 Agent 框架（工具函数级接入）
+
+OpenAI Agents SDK、CrewAI、AutoGen 的工具函数**本质都是普通 Python callable**，用
+`guard.effect()` 装饰即可复用全部能力，无需驱动整图/整 agent：
+
+```python
+from agentreplayguard import NoDuplicateEffects, Scenario
+
+scenario = Scenario("tools", seed=0, invariants=[NoDuplicateEffects("refund")])
+guard = scenario.guard()
+
+@guard.effect("refund", key="refund_id")
+def refund(refund_id: str) -> str:
+    return f"refunded {refund_id}"
+```
+
+OpenAI Agents SDK 用官方 `ScriptedModel` 离线跑工具管线（`@function_tool` 在外、
+`@guard.effect` 在内）：
+
+```python
+from agents import Agent, RunConfig, Runner, function_tool
+from agents.testing import ScriptedModel, assistant_message, function_call
+
+@function_tool
+@guard.effect("lookup", key="order_id")
+def lookup_order(order_id: str) -> str:
+    return f"order {order_id}"
+
+model = ScriptedModel([
+    [function_call("lookup_order", '{"order_id": "ORD-1"}', call_id="c1")],
+    [assistant_message("delivered")],
+])
+agent = Agent(name="billing", tools=[lookup_order], model=model)
+result = await Runner.run(agent, "...", run_config=RunConfig(tracing_disabled=True))
+```
+
+注意：
+
+- `openai-agents` 是可选依赖：`pip install 'agentreplayguard[agents]'`。
+- 核心测试必须离线（ScriptedModel 不发真实 LLM 请求），保证确定性；真实 LLM 只用于
+  手动演示（`examples/multi_framework/demo_real_llm.py`，环境变量注入端点与密钥）。
+- 完整接入说明见 `examples/multi_framework/README.md`。
+
 ## pytest fixture
 
 安装后插件自动注册 `replayguard` fixture，等价于 `Scenario` 构造器：
@@ -333,3 +376,4 @@ uv run pytest examples/refund -q
 - 并行图分支归属契约：[branch-attribution.md](../specs/004-concurrent-parallel-graph/contracts/branch-attribution.md)
 - 流式入口契约：[streaming-entry.md](../specs/005-streaming-fault-injection/contracts/streaming-entry.md)
 - requests 适配器契约：[requests-adapter.md](../specs/006-requests-adapter/contracts/requests-adapter.md)
+- 多框架工具接入契约：[tool-guard.md](../specs/007-multi-framework-tools/contracts/tool-guard.md)

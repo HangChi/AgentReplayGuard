@@ -11,6 +11,7 @@
 未提供 OPENAI_API_KEY 时脚本直接退出（不报错）。
 """
 
+# ruff: noqa: RUF001  # 中文输出使用全角标点
 from __future__ import annotations
 
 import asyncio
@@ -37,9 +38,8 @@ async def main() -> int:
 
     # 可选依赖：openai / openai-agents
     try:
+        from agents import Agent, OpenAIResponsesModel, RunConfig, Runner, function_tool
         from openai import AsyncOpenAI
-        from agents import Agent, RunConfig, Runner, function_tool
-        from agents import OpenAIResponsesModel
     except ImportError as exc:
         print(f"缺少依赖（pip install 'agentreplayguard[agents]'）：{exc}")
         return 1
@@ -71,7 +71,7 @@ async def main() -> int:
     )
 
     try:
-        result = await Runner.run(
+        await Runner.run(
             agent,
             "请给订单 ORD-REAL-1 退款",
             run_config=RunConfig(tracing_disabled=True),

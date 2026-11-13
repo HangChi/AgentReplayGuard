@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentreplayguard"
-version = "0.4.0"
+version = "0.5.0"
 description = "Deterministic side-effect safety testing for LangGraph agents: fault injection and effect-ledger assertions to catch duplicate business operations."
 readme = "README.md"
 requires-python = ">=3.10"

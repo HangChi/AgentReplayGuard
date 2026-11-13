@@ -6,7 +6,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import asyncio
+from collections.abc import AsyncIterator, Mapping
 from typing import Any, cast
 
 from langgraph.types import Command
@@ -92,6 +93,72 @@ class LangGraphAdapter:
 
     def state(self) -> Any:
         return self._graph.get_state(self._config())
+
+    async def astream(
+        self,
+        input: Mapping[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[Any]:
+        """流式驱动图，逐 chunk 产出，effect 正确归属 run/thread/checkpoint/branch。"""
+        self._ensure_async_capable()
+        checkpoint_before = self._checkpoint_id()
+        run_id = self._scenario._begin_run(self._thread_id, checkpoint_before)
+        started_tick = self._scenario._tick()
+
+        interrupts: tuple[Any, ...] = ()
+        exc: BaseException | None = None
+        try:
+            async for chunk in self._graph.astream(input, self._config(), **kwargs):
+                interrupts = interrupts + self._extract_interrupts_from_chunk(chunk)
+                yield chunk
+        except BaseException as caught:
+            # GeneratorExit / asyncio.CancelledError 是提前退出（break / 外部取消），
+            # 属正常收尾，不记为错误。
+            if not isinstance(caught, (GeneratorExit, asyncio.CancelledError)):
+                exc = caught
+            raise
+        finally:
+            self._finish_run(
+                run_id=run_id,
+                input_kind=RunInputKind.START,
+                checkpoint_before=checkpoint_before,
+                started_tick=started_tick,
+                output=None,
+                interrupts=interrupts,
+                exc=exc,
+            )
+
+    async def astream_events(
+        self,
+        input: Mapping[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[Any]:
+        """流式驱动图的事件流，逐事件产出，effect 正确归属。"""
+        self._ensure_async_capable()
+        checkpoint_before = self._checkpoint_id()
+        run_id = self._scenario._begin_run(self._thread_id, checkpoint_before)
+        started_tick = self._scenario._tick()
+
+        interrupts: tuple[Any, ...] = ()
+        exc: BaseException | None = None
+        try:
+            async for event in self._graph.astream_events(input, self._config(), **kwargs):
+                interrupts = interrupts + self._extract_interrupts_from_chunk(event)
+                yield event
+        except BaseException as caught:
+            if not isinstance(caught, (GeneratorExit, asyncio.CancelledError)):
+                exc = caught
+            raise
+        finally:
+            self._finish_run(
+                run_id=run_id,
+                input_kind=RunInputKind.START,
+                checkpoint_before=checkpoint_before,
+                started_tick=started_tick,
+                output=None,
+                interrupts=interrupts,
+                exc=exc,
+            )
 
     # 内部实现
 
@@ -234,4 +301,16 @@ class LangGraphAdapter:
             if value is None:
                 return ()
             return tuple(value)
+        return ()
+
+    @classmethod
+    def _extract_interrupts_from_chunk(cls, chunk: Any) -> tuple[Any, ...]:
+        """从流式 chunk/事件中提取 interrupt（`__interrupt__` 可能直接出现或嵌在节点更新里）。"""
+        if isinstance(chunk, dict):
+            if "__interrupt__" in chunk:
+                return cls._extract_interrupts(chunk)
+            # astream 的 chunk 形如 {node_name: {..., "__interrupt__": [...]}}
+            for value in chunk.values():
+                if isinstance(value, dict) and "__interrupt__" in value:
+                    return cls._extract_interrupts(value)
         return ()

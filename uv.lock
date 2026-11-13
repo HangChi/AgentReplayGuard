@@ -10,7 +10,7 @@ resolution-markers = [
 
 [[package]]
 name = "agentreplayguard"
-version = "0.5.0"
+version = "0.6.0"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -20,6 +20,7 @@ dev = [
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "requests" },
     { name = "ruff" },
 ]
 httpx = [
@@ -27,6 +28,9 @@ httpx = [
 ]
 langgraph = [
     { name = "langgraph" },
+]
+requests = [
+    { name = "requests" },
 ]
 
 [package.metadata]
@@ -38,9 +42,11 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
+    { name = "requests", marker = "extra == 'dev'", specifier = ">=2.28,<3.0" },
+    { name = "requests", marker = "extra == 'requests'", specifier = ">=2.28,<3.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
 ]
-provides-extras = ["langgraph", "httpx", "dev"]
+provides-extras = ["langgraph", "httpx", "requests", "dev"]
 
 [[package]]
 name = "annotated-types"

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ._common import IdempotencyConflict
 
-class IdempotencyConflict(Exception):
-    """同一幂等键对应不同参数。"""
+__all__ = ["IdempotencyConflict", "Refund", "SimulatedRefundService"]
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,6 @@
 """LangGraphAdapter：驱动串行图，按 RunSegment 归属 effect。
 
-仅使用 LangGraph 公共 API（invoke / get_state / get_graph），不包裹用户节点。
+仅使用 LangGraph 公共 API（invoke/ainvoke、get_state、get_graph），不包裹用户节点。
 """
 
 from __future__ import annotations
@@ -57,6 +57,23 @@ class LangGraphAdapter:
         self._check_checkpointer()
         return self._run(RunInputKind.INTERRUPT_RESUME, Command(resume=value))
 
+    async def ainvoke(self, input: Mapping[str, Any] | None = None) -> GraphRun:
+        return await self._arun(RunInputKind.START, input)
+
+    async def aresume(self, input: Mapping[str, Any] | None = None) -> GraphRun:
+        if self._last_segment is None:
+            raise ScenarioConfigError("aresume requires a prior run")
+        self._check_checkpointer()
+        return await self._arun(RunInputKind.RESUME, input)
+
+    async def aresume_interrupt(self, value: Any = None) -> GraphRun:
+        if self._last_segment is None or not self._last_segment.interrupted:
+            raise ScenarioConfigError(
+                "aresume_interrupt requires a prior interrupted run"
+            )
+        self._check_checkpointer()
+        return await self._arun(RunInputKind.INTERRUPT_RESUME, Command(resume=value))
+
     def state(self) -> Any:
         return self._graph.get_state(self._config())
 
@@ -78,6 +95,10 @@ class LangGraphAdapter:
                 "parallel fan-out is not supported"
             )
         self._scenario._warn("strict_graph=False; parallel fan-out check skipped")
+
+    def _ensure_async_capable(self) -> None:
+        if not callable(getattr(self._graph, "ainvoke", None)):
+            raise UnsupportedGraphError("graph is missing ainvoke()")
 
     def _find_fanout(self) -> list[str]:
         outgoing: dict[str, int] = {}
@@ -111,19 +132,73 @@ class LangGraphAdapter:
 
         output: Mapping[str, Any] | None = None
         interrupts: tuple[Any, ...] = ()
-        error_type: str | None = None
-        error_message: str | None = None
         exc: Exception | None = None
 
         try:
             output = self._graph.invoke(input, self._config())
         except Exception as caught:
             exc = caught
-            error_type = type(caught).__name__
-            error_message = str(caught)
         else:
             interrupts = self._extract_interrupts(output)
 
+        run = self._finish_run(
+            run_id=run_id,
+            input_kind=input_kind,
+            checkpoint_before=checkpoint_before,
+            started_tick=started_tick,
+            output=output,
+            interrupts=interrupts,
+            exc=exc,
+        )
+        if exc is not None:
+            raise exc
+        return run
+
+    async def _arun(
+        self,
+        input_kind: RunInputKind,
+        input: Any,
+    ) -> GraphRun:
+        self._ensure_async_capable()
+        checkpoint_before = self._checkpoint_id()
+        run_id = self._scenario._begin_run(self._thread_id, checkpoint_before)
+        started_tick = self._scenario._tick()
+
+        output: Mapping[str, Any] | None = None
+        interrupts: tuple[Any, ...] = ()
+        exc: BaseException | None = None
+
+        try:
+            output = await self._graph.ainvoke(input, self._config())
+        except BaseException as caught:
+            exc = caught
+        else:
+            interrupts = self._extract_interrupts(output)
+
+        run = self._finish_run(
+            run_id=run_id,
+            input_kind=input_kind,
+            checkpoint_before=checkpoint_before,
+            started_tick=started_tick,
+            output=output,
+            interrupts=interrupts,
+            exc=exc,
+        )
+        if exc is not None:
+            raise exc
+        return run
+
+    def _finish_run(
+        self,
+        *,
+        run_id: str,
+        input_kind: RunInputKind,
+        checkpoint_before: str | None,
+        started_tick: int,
+        output: Mapping[str, Any] | None,
+        interrupts: tuple[Any, ...],
+        exc: BaseException | None,
+    ) -> GraphRun:
         checkpoint_after = self._checkpoint_id()
         segment = RunSegment(
             run_id=run_id,
@@ -134,16 +209,12 @@ class LangGraphAdapter:
             started_tick=started_tick,
             ended_tick=self._scenario._tick(),
             interrupted=bool(interrupts),
-            error_type=error_type,
-            error_message=error_message,
+            error_type=type(exc).__name__ if exc is not None else None,
+            error_message=str(exc) if exc is not None else None,
         )
         self._scenario._add_run_segment(segment)
         self._scenario._end_run()
         self._last_segment = segment
-
-        if exc is not None:
-            raise exc
-
         return GraphRun(segment=segment, output=output, interrupts=interrupts)
 
     @staticmethod

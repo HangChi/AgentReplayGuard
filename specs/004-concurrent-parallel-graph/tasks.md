@@ -28,10 +28,10 @@ description: "Task list for 004 concurrent/parallel graph race detection"
 
 **Purpose**: 锁版本、建回归基线，确保后续改造不破坏既有行为。
 
-- [ ] T001 将 `pyproject.toml` 版本提升到 `0.4.0`（SemVer minor：新增并行检测能力）
-- [ ] T002 运行 `uv run pytest -q`、`uv run ruff check .`、`uv run mypy src/agentreplayguard`、
+- [x] T001 将 `pyproject.toml` 版本提升到 `0.4.0`（SemVer minor：新增并行检测能力）
+- [x] T002 运行 `uv run pytest -q`、`uv run ruff check .`、`uv run mypy src/agentreplayguard`、
   `uv run coverage run -m pytest -q && uv run coverage report --fail-under=90`，记录基线全绿
-- [ ] T003 确认当前分支为 `004-concurrent-parallel-graph`，且设计文档齐全
+- [x] T003 确认当前分支为 `004-concurrent-parallel-graph`，且设计文档齐全
 
 ---
 
@@ -39,13 +39,13 @@ description: "Task list for 004 concurrent/parallel graph race detection"
 
 **Purpose**: `branch_id` 字段与可注入 branch resolver，是所有故事的基础。
 
-- [ ] T004 [P] 编写 `tests/unit/test_effect_branch.py`：`EffectRecord` 含 `branch_id` 字段，
+- [x] T004 [P] 编写 `tests/unit/test_effect_branch.py`：`EffectRecord` 含 `branch_id` 字段，
   默认为 `None`，赋值后确定性；序列化/相等性不因字段破坏
-- [ ] T005 [P] 编写 `tests/unit/test_guard_branch.py`：`EffectGuard` 接受可注入
+- [x] T005 [P] 编写 `tests/unit/test_guard_branch.py`：`EffectGuard` 接受可注入
   `branch_resolver`，默认 `None`；注入后 `_begin_attempt` 写入 `branch_id`
-- [ ] T006 在 `src/agentreplayguard/effects.py` 的 `EffectRecord` 增加 `branch_id: str | None`
+- [x] T006 在 `src/agentreplayguard/effects.py` 的 `EffectRecord` 增加 `branch_id: str | None`
   字段（默认 `None`），并同步 `EffectGuard._record_outcome` 写入
-- [ ] T007 在 `src/agentreplayguard/guard.py` 的 `EffectGuard` 增加可注入 `branch_resolver`
+- [x] T007 在 `src/agentreplayguard/guard.py` 的 `EffectGuard` 增加可注入 `branch_resolver`
   参数（默认返回 `None`），`_begin_attempt` 读取并透传到 `_Attempt`
 
 ---

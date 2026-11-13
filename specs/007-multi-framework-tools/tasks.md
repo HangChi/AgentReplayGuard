@@ -49,6 +49,14 @@ description: "Task list for 007 multi-framework tool guard"
 
 ---
 
+## Phase 3b: User Story 4 — 真实 LLM 集成演示 (Priority: P3，不进 CI)
+
+- [ ] T007b [US4] 编写 `examples/multi_framework/demo_real_llm.py`：从环境变量读
+  `OPENAI_BASE_URL`/`OPENAI_API_KEY`（未提供则跳过），真实 agent 调用带 guard 的退款工具，
+  注入 lost-ack 后检测重复副作用；不硬编码密钥、不进 pytest 测试路径
+
+---
+
 ## Phase 4: 文档（Docs）
 
 - [ ] T008 [P] 更新 `docs/quickstart.md`：多框架工具函数接入章节

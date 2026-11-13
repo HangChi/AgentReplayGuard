@@ -87,6 +87,26 @@ scripted 示例（官方离线测试设施最成熟，research R-02）；③ Cre
 
 ---
 
+### User Story 4 - 真实 LLM 集成演示 (Priority: P3，不进 CI)
+
+用户有一个真实的 LLM 端点，希望**手动**跑一个演示，验证带 guard 的工具在真实 agent 下能
+抓到重复副作用。
+
+**Why this priority**: 这是「能力验证」而非「确定性测试」。真实 LLM 天生不可复现（同 seed
+下模型可能调用不同工具），违反宪法第 II 条的确定性，故**不进 CI、不写死 key**，仅作手动
+演示脚本，证明「guard 在真实框架运行时下有效」。
+
+**Independent Test**: 手动设置环境变量后运行演示脚本，真实 agent 调用带 guard 的退款工具，
+注入 lost-ack 后 `NoDuplicateEffects` 抓到重复。
+
+**Acceptance Scenarios**:
+
+1. **Given** 环境变量提供 `OPENAI_BASE_URL` 与 `OPENAI_API_KEY`，**When** 运行演示脚本，
+   **Then** 真实 agent 调用工具，effect 被记账，注入故障后重复副作用被检测。
+2. **Given** 未提供环境变量，**When** 运行演示脚本，**Then** 脚本跳过并提示（不报错）。
+
+---
+
 ### Edge Cases
 
 - **装饰器顺序**：`@tool` 与 `@guard.effect` 的叠加顺序（谁在外层）影响函数签名保留与工具
@@ -111,6 +131,9 @@ scripted 示例（官方离线测试设施最成熟，research R-02）；③ Cre
   Agent 级完整示例（AutoGen 无官方离线设施，CrewAI 需 mock LLM，见 research R-03/R-04）。
 - **FR-005**: 新增示例不引入真实 LLM API 调用，全部离线（宪法第 III 条）。
 - **FR-006**: 核心包与既有 LangGraph/httpx/requests 适配器行为不变。
+- **FR-007**: 提供真实 LLM 集成**演示脚本**（非测试、不进 CI），通过环境变量
+  `OPENAI_BASE_URL`/`OPENAI_API_KEY` 注入端点与密钥，未提供时跳过；脚本 MUST NOT 硬编码
+  任何密钥。
 
 ### Key Entities
 

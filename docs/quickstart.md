@@ -158,7 +158,9 @@ async with httpx.AsyncClient(transport=transport) as client:
 - `httpx` 是可选依赖：`pip install agentreplayguard[httpx]`；未安装时核心包仍可正常导入。
 - 注入故障会表现为 httpx 标准异常：提交前为 `ConnectTimeout` / `ConnectError`，
   提交后为 `ReadTimeout` / `ReadError`，`server_error` 为 `HTTPStatusError`。
-- 提交边界是底层 transport 返回响应（响应头到达）；流式响应体读取失败不在 lost-ack 语义内。
+- 提交边界是底层 transport 返回响应（响应头到达）。
+- `FaultKind.STREAM_BODY_LOSS` 模拟「响应头到达、响应体读取丢失」：副作用已提交，响应头正常
+  返回，但流式读取 body 时抛 `ReadError`（`client.stream()` / `response.read()`）。
 - 示例见 `examples/refund/http_tools.py` 与 `examples/refund/test_refund_http.py`。
 
 ## HTTP 客户端（requests）

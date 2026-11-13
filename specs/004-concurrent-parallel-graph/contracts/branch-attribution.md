@@ -21,8 +21,9 @@
 
 ## `branch_id` 字段契约
 
-- 类型 `str | None`；`None` 表示非 LangGraph 上下文。
-- LangGraph 上下文中等于当前节点名（`metadata['langgraph_node']`），同一图结构下确定。
+- 类型 `str | None`；`None` 表示非 LangGraph 上下文（独立调用 / HTTP 适配器）。
+- LangGraph 上下文中等于当前节点名（`metadata['langgraph_node']`），同一图结构下确定（串行
+  图同样记录节点名）。
 - 不同节点在同一 superstep 内，`branch_id` 必须互不相同（节点名天然唯一）。
 - `branch_id` 不改变 `commit_identity`（不参与去重），仅用于报告定位。
 
@@ -30,7 +31,8 @@
 
 | # | 场景 | 期望 |
 |---|------|------|
-| BC-01 | 串行图 / 非 LangGraph 上下文 guard 记录 effect | `branch_id is None` |
+| BC-01 | 非 LangGraph 上下文（独立 guard 调用） | `branch_id is None` |
+| BC-01b | 串行图 guard 记录 effect | `branch_id` = 产生 effect 的节点名 |
 | BC-02 | fan-out 图，分支 b/c 各记录一条不同 key 的 effect | 两条记录 `branch_id` 分别为 b、c（节点名），且确定 |
 | BC-03 | fan-out 图，两分支记录同一 key（无幂等键） | `NoDuplicateEffects` 报 `duplicate_effects`，`actual=2`，违规 effect_ids 两条，branch_id 不同 |
 | BC-04 | 两分支记录同一 key + 相同幂等键 | `committed_count=1`，`ok=True` |

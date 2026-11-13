@@ -14,11 +14,12 @@
 branch_id: str | None
 ```
 
-- 语义：该 effect 由哪个图节点（分支）提交；`None` 表示非 LangGraph 上下文（串行图外的
-  独立 guarded 调用、HTTP 适配器等）。
+- 语义：该 effect 由哪个图节点提交；`None` 表示非 LangGraph 上下文（独立 guarded 调用、
+  HTTP 适配器等）。
 - 取值规则（确定性）：
-  - 串行图 / 非 LangGraph 上下文：`None`
-  - LangGraph 上下文：当前节点名（`metadata['langgraph_node']`），如 `"notify"`、`"deduct"`
+  - 非 LangGraph 上下文：`None`
+  - LangGraph 上下文：当前节点名（`metadata['langgraph_node']`），如 `"notify"`、`"deduct"`；
+    串行图里同样记录产生 effect 的节点名
 - 约束：同一图结构下，`branch_id` 的赋值完全一致（与调度无关，FR-003 / SC-001）。
 
 ### 2. `branch_resolver`（新增可注入回调）

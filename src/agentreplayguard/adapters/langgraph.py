@@ -1,6 +1,7 @@
-"""LangGraphAdapter：驱动串行图，按 RunSegment 归属 effect。
+"""LangGraphAdapter：驱动图（含并行 fan-out），按 RunSegment 归属 effect。
 
 仅使用 LangGraph 公共 API（invoke/ainvoke、get_state、get_graph），不包裹用户节点。
+并行 fan-out 由 LangGraph 真并发执行，effect 通过 `get_config()` 的节点名记录分支归属。
 """
 
 from __future__ import annotations
@@ -17,8 +18,20 @@ from ..scenario import Scenario
 _GRAPH_METHODS = ("invoke", "get_state", "get_graph")
 
 
+def _langgraph_node() -> str | None:
+    """读当前 LangGraph 运行上下文的节点名；不在上下文中时返回 None。"""
+    try:
+        from langgraph.config import get_config
+
+        metadata = get_config().get("metadata", {})
+        node = metadata.get("langgraph_node")
+        return node if isinstance(node, str) else None
+    except Exception:
+        return None
+
+
 class LangGraphAdapter:
-    """在 Scenario 之上驱动一个已编译的 LangGraph 串行图。"""
+    """在 Scenario 之上驱动一个已编译的 LangGraph 图（含并行 fan-out）。"""
 
     def __init__(
         self,
@@ -33,6 +46,9 @@ class LangGraphAdapter:
         self._thread_id = thread_id or "thread-0001"
         self._strict_graph = strict_graph
         self._last_segment: RunSegment | None = None
+
+        # 注入分支归属解析器：读 LangGraph 节点名（不在上下文时 None）
+        scenario._set_branch_resolver(_langgraph_node)
 
         self._validate_graph()
 
@@ -87,14 +103,8 @@ class LangGraphAdapter:
             if not callable(getattr(self._graph, method, None)):
                 raise UnsupportedGraphError(f"graph is missing {method}()")
         fanout = self._find_fanout()
-        if not fanout:
-            return
-        if self._strict_graph:
-            raise UnsupportedGraphError(
-                f"node {fanout[0]!r} has multiple unconditional outgoing edges; "
-                "parallel fan-out is not supported"
-            )
-        self._scenario._warn("strict_graph=False; parallel fan-out check skipped")
+        if fanout and not self._strict_graph:
+            self._scenario._warn("strict_graph=False; parallel fan-out check skipped")
 
     def _ensure_async_capable(self) -> None:
         if not callable(getattr(self._graph, "ainvoke", None)):

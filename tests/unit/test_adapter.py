@@ -122,10 +122,10 @@ def test_effect_attributed_to_run():
     assert record.checkpoint_id == "cp-1"
 
 
-def test_strict_graph_detects_fanout():
+def test_strict_graph_accepts_fanout():
     scenario = Scenario("s")
-    with pytest.raises(UnsupportedGraphError):
-        LangGraphAdapter(scenario, make_graph(fanout=True))
+    adapter = LangGraphAdapter(scenario, make_graph(fanout=True))
+    adapter.invoke()  # 不再拒绝 fan-out
 
 
 def test_non_strict_skips_fanout_and_warns():

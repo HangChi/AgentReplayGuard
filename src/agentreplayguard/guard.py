@@ -179,7 +179,8 @@ class EffectGuard:
             )
             raise
 
-        self._raise_if_after_commit(attempt)
+        if self._raise_if_after_commit(attempt):
+            return result
         self._record_outcome(attempt, EffectStatus.COMMITTED)
         return result
 
@@ -224,7 +225,8 @@ class EffectGuard:
             )
             raise
 
-        self._raise_if_after_commit(attempt)
+        if self._raise_if_after_commit(attempt):
+            return cast("T", result)
         self._record_outcome(attempt, EffectStatus.COMMITTED)
         return cast("T", result)
 
@@ -291,10 +293,20 @@ class EffectGuard:
         )
         raise exc
 
-    def _raise_if_after_commit(self, attempt: _Attempt) -> None:
+    def _raise_if_after_commit(self, attempt: _Attempt) -> bool:
+        """提交后故障处理。
+
+        返回 True 表示已记录 outcome（调用方无需再记录）；返回 False 表示调用方应继续
+        正常记录 COMMITTED。
+        """
         directive = attempt.directive
         if directive is None or is_before_commit(directive.kind):
-            return
+            return False
+        # 流式 body 丢失：副作用已提交，正常返回响应头，body 读取时才失败。
+        # 因此记录 committed + fault 后不抛异常，由传输层适配器包装 body 流。
+        if directive.kind is FaultKind.STREAM_BODY_LOSS:
+            self._record_outcome(attempt, EffectStatus.COMMITTED, fault=directive.kind)
+            return True
         exc = fault_exception(directive.kind)
         self._record_outcome(
             attempt,

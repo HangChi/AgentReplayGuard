@@ -16,6 +16,7 @@ class FaultKind(str, Enum):
     CONNECTION_RESET = "connection_reset"
     SERVER_ERROR = "server_error"
     PARTIAL_SUCCESS = "partial_success"
+    STREAM_BODY_LOSS = "stream_body_loss"
 
 
 _BEFORE_COMMIT = frozenset(
@@ -44,6 +45,8 @@ def fault_exception(kind: FaultKind) -> Exception:
         return ServiceError(status=500, message="server error")
     if kind is FaultKind.PARTIAL_SUCCESS:
         return PartialSuccessError("partial success")
+    if kind is FaultKind.STREAM_BODY_LOSS:
+        return PartialSuccessError("stream body loss")
     raise ScenarioConfigError(f"unknown fault kind: {kind}")
 
 

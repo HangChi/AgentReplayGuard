@@ -5,7 +5,7 @@ httpx 是可选依赖：只有显式导入本模块时才要求安装，核心�
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable, Iterator
 
 try:
     import httpx
@@ -65,6 +65,48 @@ def _new_record(scenario: Scenario, records_before: int) -> EffectRecord | None:
     return records[records_before]
 
 
+class _BrokenSyncBodyStream(httpx.SyncByteStream):
+    """同步字节流：读取时抛 ReadError，模拟「响应头到达、body 丢失」。"""
+
+    def __iter__(self) -> Iterator[bytes]:
+        yield b""
+        raise httpx.ReadError("stream body lost after headers")
+
+
+class _BrokenAsyncBodyStream(httpx.AsyncByteStream):
+    """异步字节流：读取时抛 ReadError，语义与同步版一致。"""
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        yield b""
+        raise httpx.ReadError("stream body lost after headers")
+
+
+def _wrap_stream_body_loss(
+    response: httpx.Response,
+    request: httpx.Request,
+) -> httpx.Response:
+    """复制响应头，替换 body 为会失败的字节流。"""
+    return httpx.Response(
+        status_code=response.status_code,
+        headers=response.headers,
+        content=_BrokenSyncBodyStream(),
+        request=request,
+    )
+
+
+def _wrap_async_stream_body_loss(
+    response: httpx.Response,
+    request: httpx.Request,
+) -> httpx.Response:
+    """复制响应头，替换 body 为会失败的异步字节流。"""
+    return httpx.Response(
+        status_code=response.status_code,
+        headers=response.headers,
+        content=_BrokenAsyncBodyStream(),
+        request=request,
+    )
+
+
 class FaultyTransport(httpx.BaseTransport):
     """包裹同步 transport，为已分类请求记账并注入确定性故障。"""
 
@@ -85,7 +127,7 @@ class FaultyTransport(httpx.BaseTransport):
 
         records_before = len(self._scenario.effects.records)
         try:
-            return self._scenario.guard().call(
+            response: httpx.Response = self._scenario.guard().call(
                 effect.effect_type,
                 self._base.handle_request,
                 request,
@@ -100,6 +142,12 @@ class FaultyTransport(httpx.BaseTransport):
             if mapped is None:
                 raise
             raise mapped from exc
+
+        # 流式 body 丢失：副作用已提交，响应头正常，body 读取时失败
+        record = _new_record(self._scenario, records_before)
+        if record is not None and record.fault is FaultKind.STREAM_BODY_LOSS:
+            return _wrap_stream_body_loss(response, request)
+        return response
 
     def close(self) -> None:
         self._base.close()
@@ -125,7 +173,7 @@ class AsyncFaultyTransport(httpx.AsyncBaseTransport):
 
         records_before = len(self._scenario.effects.records)
         try:
-            return await self._scenario.guard().acall(
+            response: httpx.Response = await self._scenario.guard().acall(
                 effect.effect_type,
                 self._base.handle_async_request,
                 request,
@@ -140,6 +188,12 @@ class AsyncFaultyTransport(httpx.AsyncBaseTransport):
             if mapped is None:
                 raise
             raise mapped from exc
+
+        # 流式 body 丢失：副作用已提交，响应头正常，body 读取时失败
+        record = _new_record(self._scenario, records_before)
+        if record is not None and record.fault is FaultKind.STREAM_BODY_LOSS:
+            return _wrap_async_stream_body_loss(response, request)
+        return response
 
     async def aclose(self) -> None:
         await self._base.aclose()

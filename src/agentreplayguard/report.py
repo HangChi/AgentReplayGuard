@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
 from typing import Any
 
@@ -78,6 +79,29 @@ class ScenarioReport:
         if not self.ok:
             raise EffectSafetyError(self.format())
 
+    def to_dict(self) -> dict[str, Any]:
+        """导出为纯 JSON 可序列化的 dict（Enum 转 value、dataclass 转 dict）。"""
+        result = _to_plain(
+            {
+                "scenario_name": self.scenario_name,
+                "seed": self.seed,
+                "effects": self.effects,
+                "run_segments": self.run_segments,
+                "violations": self.violations,
+                "warnings": self.warnings,
+            }
+        )
+        return dict(result)
+
+    def to_json(self) -> str:
+        """导出为确定性 JSON 字符串（字段顺序固定、无 wall clock）。"""
+        return json.dumps(
+            self.to_dict(),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
     @staticmethod
     def _format_effect(effect: EffectRecord) -> str:
         fault = effect.fault.value if effect.fault is not None else "-"
@@ -88,3 +112,16 @@ class ScenarioReport:
             f"run={effect.run_id or '-'} thread={effect.thread_id or '-'} "
             f"checkpoint={effect.checkpoint_id or '-'} branch={branch}"
         )
+
+
+def _to_plain(obj: Any) -> Any:
+    """递归地把 dataclass / Enum / tuple 转为纯 JSON 可序列化结构。"""
+    if is_dataclass(obj) and not isinstance(obj, type):
+        return {k: _to_plain(v) for k, v in asdict(obj).items()}
+    if isinstance(obj, Enum):
+        return obj.value
+    if isinstance(obj, Mapping):
+        return {k: _to_plain(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_plain(v) for v in obj]
+    return obj

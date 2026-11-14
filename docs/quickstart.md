@@ -30,6 +30,36 @@ uv sync --extra dev --extra langgraph --extra httpx --extra requests --extra age
 
 ## 最小示例
 
+推荐用 `replayguard` fixture 造场景：**测试结束后它会自动检查副作用安全性**，忘记写断言
+也不会静默通过。
+
+```python
+from agentreplayguard import FaultKind, FaultPlan, FaultRule, NoDuplicateEffects
+
+
+def test_refund_lost_ack(replayguard):
+    scenario = replayguard(
+        "refund-lost-ack",
+        seed=7,
+        faults=FaultPlan([
+            FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
+        ]),
+        invariants=[NoDuplicateEffects("refund")],
+    )
+    # ... 跑业务流程 ...
+    # 无需 assert：有重复退款时，本测试自动 FAILED
+```
+
+若需要细粒度断言（如检查具体笔数），仍可显式读报告——两者不冲突，也不会重复报错：
+
+```python
+report = scenario.finish()
+assert not report.ok
+assert scenario.effects.committed_count("refund") == 2
+```
+
+下面分步说明手工组装方式（`Scenario(...)` 直接构造**不会**自动断言）。
+
 1. 用 `Scenario` 声明一个场景：注入「提交后响应丢失」故障，并挂上
    `NoDuplicateEffects` 不变量。
 
@@ -86,6 +116,32 @@ report = scenario.finish()
 assert not report.ok
 print(report.format())
 ```
+
+## 自动断言（推荐）
+
+`replayguard` fixture 会在测试体执行完毕后自动检查该测试创建的所有场景：
+
+| 情况 | 行为 |
+|------|------|
+| 场景有违规，测试体未失败 | 测试 **FAILED**，信息为 `report.format()` 的完整定位内容 |
+| 场景有违规，但测试体已失败 | 保持原失败原因，副作用结论作为 warning 附加，**不叠加**第二个错误 |
+| 场景无违规 | 通过 |
+| 场景创建了但没记录任何 effect | 通过，并给一条 warning 提示工作流可能没跑 |
+| 测试被 skip / xfail | 不参与检查，语义不变 |
+| 显式 `assert not report.ok` 已写 | 与自动断言不冲突，只报一次错 |
+
+「验证工具确实能抓到问题」这类元测试，用 `expect_violations=True` 声明预期违规：
+
+```python
+def test_tool_detects_duplicate(replayguard):
+    scenario = replayguard("meta-check", seed=0, expect_violations=True,
+                           invariants=[NoDuplicateEffects("refund")])
+    # ... 制造重复退款 ...
+    # 本测试通过：因为「有违规」正是这里要验证的
+```
+
+注意：直接 `Scenario(...)` 构造**不会**自动断言（保持既有行为）。需要自动断言时请使用
+`replayguard` fixture。
 
 ## 异步工具与异步图
 

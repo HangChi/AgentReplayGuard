@@ -9,6 +9,29 @@
 
 暂无。
 
+## [0.13.0] - 2026-11-14
+
+### Added
+
+- **场景自动断言**：`replayguard` fixture 在测试体执行完毕后自动检查该测试创建的所有场景，
+  有副作用违规就让测试 FAILED。修复「忘记写断言 → 静默通过」的漏报（此前实测三种形态：
+  忘记 `finish()`、`finish()` 但不断言、场景声明了却未使用，三者都会静默通过）。
+- 新增 `expect_violations=True` 参数：显式声明「本场景预期违规」，用于「验证工具能抓到
+  问题」的元测试。
+
+### Changed
+
+- **`replayguard` fixture 返回场景工厂，而非 `Scenario` 类本身**。
+  调用写法 `replayguard("name", seed=0, ...)` **完全不变**；但 `replayguard is Scenario`
+  不再成立。这是登记实例以做自动检查的必要改动。
+
+### 行为细节
+
+- 测试体已失败时不追加第二个错误（副作用结论降级为 warning），避免「1 failed + 1 error」。
+- 测试被 skip / xfail 时自动检查不介入，语义不变。
+- 场景创建了但没记录任何 effect 时给 warning 提示（不失败）。
+- 直接 `Scenario(...)` 构造的行为完全不变（不自动断言）。
+
 ## [0.12.0] - 2026-11-14
 
 ### Added
@@ -136,7 +159,8 @@
 - LangGraph Adapter：驱动 RetryPolicy、Checkpoint 恢复与 Interrupt 重放。
 - 退款完整示例与 Quickstart 文档。
 
-[Unreleased]: https://github.com/HangChi/AgentReplayGuard/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/HangChi/AgentReplayGuard/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/HangChi/AgentReplayGuard/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/HangChi/AgentReplayGuard/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/HangChi/AgentReplayGuard/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/HangChi/AgentReplayGuard/compare/v0.9.0...v0.10.0

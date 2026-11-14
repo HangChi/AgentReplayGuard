@@ -157,6 +157,73 @@ def test_partial_success_raises_chunked_encoding_error():
         session.post("https://sim.test/refunds", json={})
 
 
+def test_stream_body_loss_stream_read_raises_and_records_committed():
+    sc = Scenario(
+        "s",
+        seed=0,
+        faults=FaultPlan(
+            [FaultRule(FaultKind.STREAM_BODY_LOSS, effect_type="refund", attempt=1)]
+        ),
+    )
+    session, base, _ = _session_with(sc, _refund_effect)
+
+    # 流式：响应头正常返回，读 body 时抛 ChunkedEncodingError
+    resp = session.post("https://sim.test/refunds", json={}, stream=True)
+    assert resp.status_code == 200
+    assert len(base.calls) == 1
+    with pytest.raises(requests.exceptions.ChunkedEncodingError):
+        _ = resp.content  # 触发读取，抛 ChunkedEncodingError
+
+    record = sc.effects.records[0]
+    assert record.status.value == "committed"
+    assert record.fault is FaultKind.STREAM_BODY_LOSS
+
+
+def test_stream_body_loss_non_stream_read_also_raises():
+    """非流式 send 内部读 body，也会抛 ChunkedEncodingError，语义仍成立。"""
+    sc = Scenario(
+        "s",
+        seed=0,
+        faults=FaultPlan(
+            [FaultRule(FaultKind.STREAM_BODY_LOSS, effect_type="refund", attempt=1)]
+        ),
+    )
+    session, _base, _ = _session_with(sc, _refund_effect)
+    with pytest.raises(requests.exceptions.ChunkedEncodingError):
+        session.post("https://sim.test/refunds", json={})
+
+    record = sc.effects.records[0]
+    assert record.status.value == "committed"
+    assert record.fault is FaultKind.STREAM_BODY_LOSS
+
+
+def test_stream_body_loss_idempotency_folds():
+    from agentreplayguard import NoDuplicateEffects
+
+    def refund_effect_with_ik(r):
+        return HttpEffect("refund", "R-1", {"amount": 100}, idempotency_key="ik-1")
+
+    sc = Scenario(
+        "s",
+        seed=0,
+        faults=FaultPlan(
+            [FaultRule(FaultKind.STREAM_BODY_LOSS, effect_type="refund", attempt=1)]
+        ),
+        invariants=[NoDuplicateEffects("refund")],
+    )
+    session, _base, _ = _session_with(sc, refund_effect_with_ik)
+
+    for _ in range(2):
+        try:
+            session.post("https://sim.test/refunds", json={})
+        except requests.exceptions.ChunkedEncodingError:
+            continue
+
+    report = sc.finish()
+    assert report.ok  # 幂等键折叠为一次提交
+    assert sc.effects.committed_count("refund") == 1
+
+
 def test_base_exception_propagates_and_records_not_committed():
     sc = Scenario("s", seed=0)
 

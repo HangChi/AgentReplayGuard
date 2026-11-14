@@ -5,7 +5,7 @@ requests 是可选依赖：只有显式导入本模块时才要求安装，核�
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 try:
@@ -25,6 +25,42 @@ from ._http_common import HttpEffect, classify_or_raise
 __all__ = ["HttpEffect", "RequestsAdapter"]
 
 ClassifyRequest = Callable[[requests.PreparedRequest], "HttpEffect | None"]
+
+
+class _BrokenBodyStream:
+    """模拟「响应头到达、body 丢失」：读 body 时抛 ChunkedEncodingError。
+
+    语义与 httpx 适配器的 `_BrokenSyncBodyStream` 一致：请求已提交（status=committed），
+    响应头正常返回，但读取响应体时失败。
+    """
+
+    def __init__(self, body: bytes) -> None:
+        self._body = body
+
+    def stream(self, amt: int | None, decode_content: bool = False) -> Iterator[bytes]:
+        # 先产出已到达的部分内容（模拟部分 body 已收到），随后抛错
+        if self._body:
+            yield self._body
+        raise requests.exceptions.ChunkedEncodingError("stream body lost after headers")
+
+    def read(self, amt: int | None = None) -> bytes:
+        raise requests.exceptions.ChunkedEncodingError("stream body lost after headers")
+
+
+def _wrap_stream_body_loss(
+    response: requests.Response,
+    request: requests.PreparedRequest,
+) -> requests.Response:
+    """复制响应头，替换 body 为读取时抛 ChunkedEncodingError 的流。"""
+    body = response.content if response._content is not False else b""
+    wrapped = requests.Response()
+    wrapped.status_code = response.status_code
+    wrapped.headers = response.headers.copy()
+    wrapped._content = False  # 保持未消费状态，读取 body 时才触发失败
+    wrapped.raw = _BrokenBodyStream(body)
+    wrapped.request = request
+    wrapped.url = request.url or ""
+    return wrapped
 
 
 def _map_injected_fault(
@@ -90,7 +126,7 @@ class RequestsAdapter(BaseAdapter):
 
         records_before = len(self._scenario.effects.records)
         try:
-            return self._scenario.guard().call(
+            response = self._scenario.guard().call(
                 effect.effect_type,
                 self._base.send,
                 request,
@@ -110,6 +146,12 @@ class RequestsAdapter(BaseAdapter):
             if mapped is None:
                 raise
             raise mapped from exc
+
+        # 流式 body 丢失：副作用已提交，响应头正常，body 读取时失败
+        record = _new_record(self._scenario, records_before)
+        if record is not None and record.fault is FaultKind.STREAM_BODY_LOSS:
+            return _wrap_stream_body_loss(response, request)
+        return response
 
     def close(self) -> None:
         self._base.close()

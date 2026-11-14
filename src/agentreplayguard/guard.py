@@ -33,6 +33,22 @@ _ASYNC_MISUSE_MESSAGE = (
 )
 
 
+def _attach_note(exc: BaseException, note: str) -> None:
+    """给异常附加排障上下文（Python 3.11+ 的 `add_note`；3.10 静默跳过）。"""
+    add_note = getattr(exc, "add_note", None)
+    if callable(add_note):
+        add_note(note)
+
+
+def _attempt_note(attempt: _Attempt) -> str:
+    return (
+        f"[agentreplayguard] effect={attempt.effect_type} "
+        f"key={attempt.business_key!r} attempt={attempt.attempt} "
+        f"run={attempt.run_id or '-'} thread={attempt.thread_id or '-'} "
+        f"checkpoint={attempt.checkpoint_id or '-'}"
+    )
+
+
 def _canonical_json(obj: Any) -> str:
     try:
         return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
@@ -177,6 +193,7 @@ class EffectGuard:
                 error_type=type(exc).__name__,
                 error_message=_truncate(str(exc)),
             )
+            _attach_note(exc, _attempt_note(attempt))
             raise
 
         if self._raise_if_after_commit(attempt):
@@ -215,6 +232,7 @@ class EffectGuard:
                 error_type=type(exc).__name__,
                 error_message=_truncate(str(exc)),
             )
+            _attach_note(exc, _attempt_note(attempt))
             raise
         except Exception as exc:
             self._record_outcome(
@@ -223,6 +241,7 @@ class EffectGuard:
                 error_type=type(exc).__name__,
                 error_message=_truncate(str(exc)),
             )
+            _attach_note(exc, _attempt_note(attempt))
             raise
 
         if self._raise_if_after_commit(attempt):
@@ -260,7 +279,7 @@ class EffectGuard:
         params_hash = _sha256(_canonical_json(params_map))
         idempotency_key_hash = self._resolve_idempotency_hash(idempotency_key, arg_map)
 
-        attempt = self._store._next_attempt(effect_type, business_key)
+        attempt = self._store.next_attempt(effect_type, business_key)
         directive = self._injector.next_directive(effect_type, business_key, attempt)
         run_id, thread_id, checkpoint_id = self._run_context()
         branch_id = self._branch_resolver()
@@ -291,6 +310,7 @@ class EffectGuard:
             error_type=type(exc).__name__,
             error_message=_truncate(str(exc)),
         )
+        _attach_note(exc, _attempt_note(attempt))
         raise exc
 
     def _raise_if_after_commit(self, attempt: _Attempt) -> bool:
@@ -315,6 +335,7 @@ class EffectGuard:
             error_type=type(exc).__name__,
             error_message=_truncate(str(exc)),
         )
+        _attach_note(exc, _attempt_note(attempt))
         raise exc
 
     def _resolve_key(
@@ -378,8 +399,8 @@ class EffectGuard:
         error_message: str | None = None,
     ) -> None:
         record = EffectRecord(
-            effect_id=self._store._next_effect_id(),
-            sequence=self._store._next_sequence(),
+            effect_id="",
+            sequence=0,
             effect_type=attempt.effect_type,
             business_key=attempt.business_key,
             params_hash=attempt.params_hash,
@@ -396,4 +417,4 @@ class EffectGuard:
             ended_tick=self._clock.tick(),
             branch_id=attempt.branch_id,
         )
-        self._store._append(record)
+        self._store.append(record)

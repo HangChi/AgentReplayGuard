@@ -142,3 +142,40 @@ def test_effect_decorator_preserves_signature():
     assert refund.__name__ == "refund"
     assert refund.__doc__ == "Refund docstring."
     assert refund("R-9") == "R-9"
+
+
+def test_fn_exception_carries_attempt_note():
+    """异常上应附带 attempt 上下文 note，便于排障。"""
+    scenario = Scenario("s")
+    guard = scenario.guard()
+
+    def fn(refund_id):
+        raise ValueError("boom")
+
+    with pytest.raises(ValueError) as excinfo:
+        guard.call("refund", fn, refund_id="R-1", key="refund_id")
+
+    notes = getattr(excinfo.value, "__notes__", None)
+    if notes is not None:  # Python 3.11+
+        assert any("effect=refund" in n and "key='R-1'" in n and "attempt=1" in n for n in notes)
+
+
+def test_fault_exception_carries_attempt_note():
+    """故障注入异常也应附带 attempt 上下文 note。"""
+    scenario = Scenario(
+        "s",
+        faults=FaultPlan(
+            [FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1)]
+        ),
+    )
+    guard = scenario.guard()
+
+    def fn(refund_id):
+        return "ok"
+
+    with pytest.raises(TimeoutError) as excinfo:
+        guard.call("refund", fn, refund_id="R-1", key="refund_id")
+
+    notes = getattr(excinfo.value, "__notes__", None)
+    if notes is not None:  # Python 3.11+
+        assert any("effect=refund" in n and "attempt=1" in n for n in notes)

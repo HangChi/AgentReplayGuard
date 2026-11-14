@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "异步副作用安全测试支持：为 EffectGuard 增加 async effect 装饰器与异步调用路径，为 LangGraphAdapter 增加 ainvoke/aresume/aresume_interrupt，保证故障注入、attempt 计数、effect 记账、报告与同步路径完全一致，并明确拒绝同步误用异步函数（不得静默记为 committed）。"
 

@@ -1,7 +1,7 @@
 # Research: requests 客户端的副作用记账与故障注入适配器
 
 **Feature**: 006-requests-adapter
-**Status**: Draft
+**Status**: Implemented
 
 ## R-01 接缝：requests 官方 Transport Adapter
 

@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-14
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "继续下一个特性"（agent 依据实测缺陷提出，见 research.md R-01/R-02）
 

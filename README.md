@@ -39,6 +39,7 @@ AI Agent 调用有副作用的工具时，失败语义与普通函数不同：
 - [x] 更多模拟服务模板（订单/邮件/库存）（[012 规格](specs/012-more-simulated-services/spec.md)）
 - [x] 场景自动断言（消除静默漏报）（[013 规格](specs/013-auto-assert-scenario/spec.md)）
 - [x] Phase 5 开源发布（[GitHub 仓库](https://github.com/HangChi/AgentReplayGuard)、[v0.1.0 Release](https://github.com/HangChi/AgentReplayGuard/releases/tag/v0.1.0)）
+- [x] PyPI 正式发布（[v0.14.0](https://github.com/HangChi/AgentReplayGuard/releases/tag/v0.14.0)，`agentreplayguard` 首个正式 PyPI 版本）
 
 ## 快速开始
 

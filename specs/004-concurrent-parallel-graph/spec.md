@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "MVP 已完成，把 001/002/003 明确排除的『并发/并行图 + 竞态与线性一致性检测』作为下一阶段实现"
 

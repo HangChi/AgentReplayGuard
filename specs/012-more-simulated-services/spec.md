@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-14
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "B 类扩展，做更多模拟服务模板"
 

@@ -1,7 +1,7 @@
 # Research: 流式接口的副作用归属与故障注入
 
 **Feature**: 005-streaming-fault-injection
-**Status**: Draft
+**Status**: Implemented
 
 本文件记录流式接口（`astream` / `astream_events`）支持的技术调研结论，每条决策附实测依据
 与被否决的方案。

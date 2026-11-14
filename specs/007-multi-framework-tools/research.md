@@ -1,7 +1,7 @@
 # Research: 多框架工具副作用记账（OpenAI Agents SDK / CrewAI / AutoGen）
 
 **Feature**: 007-multi-framework-tools
-**Status**: Draft
+**Status**: Implemented
 
 ## R-01 核心判断：工具函数是纯 Python 函数，可直接用 guard.effect 装饰
 

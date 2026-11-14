@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "HTTP 故障注入传输层（httpx transport adapter）：编号 3，short name http-fault-transport。为真实 httpx.Client/AsyncClient 提供可选传输层适配器，在 transport 层注入确定性故障（lost-ack 等），无需改写业务代码；复用现有 EffectGuard 记账与 FaultPlan；离线确定性、无真实网络；httpx 为可选 extra，核心包仍仅标准库。"
 

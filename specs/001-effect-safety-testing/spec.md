@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-12
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: MVP：面向 LangGraph + pytest 的 agent 副作用安全测试工具。提供 Effect Store、
 Fault Injector、Simulated Service、Invariant Checker、LangGraph Adapter。MVP 仅覆盖串行

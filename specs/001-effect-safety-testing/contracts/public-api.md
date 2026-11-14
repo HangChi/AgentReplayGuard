@@ -2,7 +2,7 @@
 
 **Feature**: `001-effect-safety-testing`
 **Date**: 2026-11-12
-**Status**: Draft（实现前冻结；变更需更新本文件与契约测试）
+**Status**: Implemented（v0.14.0 已发布；变更需更新本文件与契约测试）
 
 本文件定义 MVP 的公开 Python API。所有签名以 `src/agentreplayguard/__init__.py` 的导出为准；
 内部模块路径不构成兼容承诺。
@@ -22,6 +22,7 @@ from agentreplayguard import (
     FaultPlan,
     Invariant,
     NoDuplicateEffects,
+    ConcurrentCommitDetected,
     MaxEffectCount,
     CustomInvariant,
     Violation,
@@ -66,6 +67,25 @@ class Scenario:
     def guard(self) -> EffectGuard: ...
 
     def finish(self) -> ScenarioReport: ...
+
+    # 运行期公开接口（v0.14.0 收敛；供 LangGraphAdapter 等外部驱动方使用）
+    def begin_run(self, thread_id: str, checkpoint_id: str | None) -> tuple[str, int]:
+        """开启一次 run：登记 run_id/thread/checkpoint 并推进逻辑时钟。
+
+        返回 (run_id, started_tick)，二者都用于后续构造 RunSegment。"""
+        ...
+
+    def end_run(self, segment: RunSegment) -> RunSegment:
+        """收尾一次 run：补全 ended_tick、登记 segment 并清理 run 上下文。"""
+        ...
+
+    def set_branch_resolver(self, resolver: Callable[[], str | None]) -> None:
+        """注入分支归属解析器（适配器层使用）。"""
+        ...
+
+    def warn(self, message: str) -> None:
+        """追加一条场景级警告（进入报告 warnings）。"""
+        ...
 ```
 
 **契约**:
@@ -126,6 +146,18 @@ class EffectStore:
     def committed_count(self, effect_type: str | None = None) -> int: ...
     def attempts(self, effect_type: str, business_key: str) -> int: ...
 
+    # 记账公开接口（v0.14.0 收敛；由 EffectGuard 与适配器/测试使用）
+    def next_attempt(self, effect_type: str, business_key: str) -> int:
+        """登记一次新的尝试，返回递增后的 attempt 序号（从 1 起）。"""
+        ...
+
+    def append(self, record: EffectRecord) -> EffectRecord:
+        """追加一条 effect 记录并分配 effect_id / sequence。
+
+        入参的 ``effect_id`` 与 ``sequence`` 视为占位值（请传空串与 0），
+        由账本在此统一分配，保证 identity 口径一致；返回补全后的正式记录。"""
+        ...
+
 
 class EffectView(Protocol):
     @property
@@ -140,7 +172,9 @@ class EffectView(Protocol):
 - `committed_count(effect_type)` 统计**去重后的业务提交数**：同一业务键下，相同幂等键的
   多条 `COMMITTED` 记录只计 1 次；无幂等键时每条记录计 1 次。原始记录仍可通过
   `records` 查看。
-- `EffectStore` 不提供写入或清空方法；写入只由 EffectGuard 完成。
+- `next_attempt` / `append` 是账本写入入口（v0.14.0 起公开），供 `EffectGuard` 与适配器
+  使用：`next_attempt` 递增 attempt 计数，`append` 统一分配 `effect_id` / `sequence` 后
+  落账并返回补全记录。Store 不提供清空方法，也不允许绕过账本直接写入 `records`。
 - Store 不是线程安全的；一个 Scenario 只允许单线程执行（MVP 仅串行图）。
 
 ## EffectRecord / EffectStatus
@@ -225,6 +259,18 @@ class NoDuplicateEffects:
     def __init__(self, effect_type: str | None = None) -> None: ...
 
 
+class ConcurrentCommitDetected:
+    """检测同一业务键被「并发」提交（effect 区间重叠）。
+
+    判定基于 `started_tick` / `ended_tick` 区间重叠：两条 COMMITTED 记录同
+    (effect_type, business_key)，若区间相交
+    （`a.started < b.ended and b.started < a.ended`）即为并发提交。
+    与 `NoDuplicateEffects` 正交：前者判「并发」，后者判「重复」。
+    """
+
+    def __init__(self, effect_type: str | None = None) -> None: ...
+
+
 class MaxEffectCount:
     def __init__(self, effect_type: str, max_count: int) -> None: ...
 
@@ -256,6 +302,10 @@ class Violation:
   message 必须区分 `duplicate_effects`（多个不同幂等键或无幂等键）与
   `parameter_mismatch`（同一提交身份出现不同 `params_hash`），并在 `effect_ids` 中列出
   全部相关记录。
+- `ConcurrentCommitDetected` 对 `COMMITTED` 记录按 `started_tick` / `ended_tick` 区间
+  重叠判定「并发提交」（仅同 `(effect_type, business_key)` 之间比较）；区间不相交或
+  `ended_tick is None` 的记录不判并发。与 `NoDuplicateEffects` 正交（并发 vs 重复），
+  两者可同时声明。
 - `MaxEffectCount` 的 `max_count >= 0`；`effect_type` 非空；计数口径同上（去重后提交数）。
 - `CustomInvariant` 的 predicate 抛异常视为违规，异常信息进入 `message`。
 - `Violation` 按不变量声明顺序返回；同一不变量内按 `effect_ids` 字典序。

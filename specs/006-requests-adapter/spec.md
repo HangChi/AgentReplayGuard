@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "A 类剩余扩展逐个完成，从其他 HTTP 客户端适配器（requests）开始"
 

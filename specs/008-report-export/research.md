@@ -1,7 +1,7 @@
 # Research: 报告结构化导出（to_dict / to_json）
 
 **Feature**: 008-report-export
-**Status**: Draft
+**Status**: Implemented
 
 ## R-01 为什么是「导出」而非「持久化 Effect Store」
 

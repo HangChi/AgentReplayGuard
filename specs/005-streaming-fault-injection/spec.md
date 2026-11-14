@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "A 类剩余扩展，从流式接口故障注入（astream/astream_events）开始"
 

@@ -1,7 +1,7 @@
 # Research: 场景自动断言（消除静默漏报）
 
 **Feature**: 013-auto-assert-scenario
-**Status**: Draft
+**Status**: Implemented
 **Date**: 2026-11-14
 
 ## R-01 问题证据：三种静默漏报形态（已实测）

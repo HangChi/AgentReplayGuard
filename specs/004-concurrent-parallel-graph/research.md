@@ -1,7 +1,7 @@
 # Research: 并发与并行图的副作用竞态与线性一致性检测
 
 **Feature**: 004-concurrent-parallel-graph
-**Status**: Draft
+**Status**: Implemented
 
 本文件记录本特性的技术调研结论，每条决策附实测依据与被否决的方案。
 

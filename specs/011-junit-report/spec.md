@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-14
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "B 类扩展，从 CI 报告格式（JUnit XML 等）开始"
 

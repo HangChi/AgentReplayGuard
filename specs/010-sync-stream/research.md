@@ -1,7 +1,7 @@
 # Research: 同步 stream 入口（LangGraphAdapter）
 
 **Feature**: 010-sync-stream
-**Status**: Draft
+**Status**: Implemented
 
 ## R-01 现状：只有异步 astream/astream_events，无同步 stream
 

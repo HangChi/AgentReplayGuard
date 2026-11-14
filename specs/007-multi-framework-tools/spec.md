@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "A 类剩余扩展，其他 Agent 框架适配器（OpenAI Agents SDK / CrewAI / AutoGen）"
 

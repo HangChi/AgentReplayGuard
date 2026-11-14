@@ -1,7 +1,7 @@
 # Research: 更多模拟服务模板（订单/邮件/库存）
 
 **Feature**: 012-more-simulated-services
-**Status**: Draft
+**Status**: Implemented
 
 ## R-01 范式：复用退款服务的「内存账本 + 幂等键」模式
 

@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "本地持久化 Effect Store 改为报告结构化导出（to_dict / to_json）"
 

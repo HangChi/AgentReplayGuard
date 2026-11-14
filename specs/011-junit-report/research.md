@@ -1,7 +1,7 @@
 # Research: CI 报告格式（JUnit XML）
 
 **Feature**: 011-junit-report
-**Status**: Draft
+**Status**: Implemented
 
 ## R-01 竞品缺口：pytest --junitxml 记录的是 pytest 用例，不是副作用检测结论
 

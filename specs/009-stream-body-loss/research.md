@@ -1,7 +1,7 @@
 # Research: 流式响应体丢失语义（httpx 传输层）
 
 **Feature**: 009-stream-body-loss
-**Status**: Draft
+**Status**: Implemented
 
 ## R-01 现状：提交边界在「响应头到达」，body 读取失败在范围外
 

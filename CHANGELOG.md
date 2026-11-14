@@ -7,7 +7,45 @@
 
 ## [Unreleased]
 
-暂无。
+### Fixed
+
+- **同步函数异常记账缺失**：`guard.call`（同步路径）对包装函数抛出的异常未兜底，
+  `NOT_COMMITTED` 记录丢失，导致 `NoDuplicateEffects` 等不变量漏报。现在同步路径
+  与异步路径一致：异常照常登记尝试结果后重抛。
+- **requests 适配器缺失 `STREAM_BODY_LOSS` 故障映射**：此前注入流式响应体丢失故障时，
+  会抛原始 `PartialSuccessError` 而非 requests 语义异常。现已补全：副作用已提交、
+  响应头正常返回，body 读取时才抛 `ChunkedEncodingError`（与 httpx 适配器语义一致）。
+- 副作用异常现在附带排障上下文：`effect` / `key` / `attempt` / `run` / `thread` /
+  `checkpoint`（Python 3.11+ 以 `add_note` 附加，3.10 静默跳过）。
+
+### Changed
+
+- **EffectStore / Scenario 内部写入接口收敛为公开接口**：`_next_attempt` →
+  `next_attempt`，`_append` → `append`（`effect_id` / `sequence` 由账本统一分配，
+  入参占位值，返回补全后的正式记录），`_begin_run` / `_end_run` / `_add_run_segment` /
+  `_tick` / `_warn` / `_set_branch_resolver` → `begin_run`（返回 `(run_id, started_tick)`）/
+  `end_run`（补全 `ended_tick` 并登记）`/`warn` / `set_branch_resolver`。跨模块私有调用
+  收敛为公开契约。
+- 四个模拟服务（refund / order / email / inventory）抽取共享幂等账本基类 `_Ledger`
+  （`services/_common.py`），消除约 80% 重复的「账本 + 幂等键」范式代码。
+
+### Performance
+
+- **LangGraph 适配器 interrupts 累积改 `list`**：`interrupts + tuple` 逐 chunk 追加是
+  O(n²)，改为 `list.extend`（收尾时再转 tuple），消除大量 interrupt 场景下的二次复杂度。
+- **`ConcurrentCommitDetected._any_overlap` 改排序扫描**：区间重叠判定从双重循环 O(n²)
+  改为按 `started_tick` 排序后检查相邻对 O(n log n)，语义不变（仍过滤 `ended_tick is
+  None` 的记录）。
+
+### CI
+
+- `.github/workflows/ci.yml` 接入覆盖率门槛：`--cov-fail-under=90`（与 `pyproject.toml`
+  的 `fail_under` 对齐），低于门槛 CI 失败。
+
+### Docs
+
+- README「快速开始」补充 pytest 最小示例：`replayguard` fixture 自动断言用法 +
+  细粒度断言的 `finish()` / `committed_count` 写法。
 
 ## [0.13.0] - 2026-11-14
 

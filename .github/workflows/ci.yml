@@ -24,7 +24,8 @@ jobs:
       - name: Lint
         run: uv run ruff check .
       - name: Type check
-        run: uv run mypy src/agentreplayguard
+        # 走 pyproject 的 [tool.mypy] 配置（packages + mypy_path），保证与本地一致
+        run: uv run mypy
       - name: Test & coverage
         # 本包是 pytest 插件，会在 pytest-cov 启动前被导入，故用
         # `coverage run -m pytest` 而非 `pytest --cov` 来测量源码覆盖率。

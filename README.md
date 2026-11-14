@@ -68,6 +68,36 @@ uv run pytest examples/refund -q
 [quickstart.md](specs/001-effect-safety-testing/quickstart.md)，版本演进见
 [CHANGELOG.md](CHANGELOG.md)。
 
+### pytest 最小示例
+
+`replayguard` fixture 由插件自动注册（无需 import）：声明场景后，**测试结束会自动检查
+副作用安全性**，有违规即 FAILED——忘记写断言也不会静默通过。
+
+```python
+from agentreplayguard import FaultKind, FaultPlan, FaultRule, NoDuplicateEffects
+
+# examples/refund/test_refund_idempotent.py 的简化版
+def test_refund_lost_ack(replayguard):
+    scenario = replayguard(
+        "refund-lost-ack",
+        seed=7,
+        faults=FaultPlan([
+            FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
+        ]),
+        invariants=[NoDuplicateEffects("refund")],
+    )
+    # 用 scenario.guard().effect(...) 包裹有副作用的工具，跑业务流程……
+    # 无需手动 assert：出现重复退款时本测试自动 FAILED
+```
+
+如需细粒度断言（如具体笔数），仍可显式读报告——两者不冲突，也不会重复报错：
+
+```python
+report = scenario.finish()
+assert not report.ok
+assert scenario.effects.committed_count("refund") == 2
+```
+
 ## 核心概念
 
 | 模块 | 职责 |

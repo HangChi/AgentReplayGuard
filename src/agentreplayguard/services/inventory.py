@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ._common import IdempotencyConflict
+from ._common import IdempotencyConflict, _Ledger
 
 __all__ = ["IdempotencyConflict", "InventoryOp", "SimulatedInventoryService"]
 
@@ -23,9 +23,7 @@ class SimulatedInventoryService:
     """参考实现：内存库存操作账本，支持可开关的幂等键。"""
 
     def __init__(self) -> None:
-        self._ledger: list[InventoryOp] = []
-        self._by_key: dict[str, InventoryOp] = {}
-        self._counter = 0
+        self._ledger: _Ledger[InventoryOp] = _Ledger()
 
     def apply(
         self,
@@ -34,34 +32,33 @@ class SimulatedInventoryService:
         quantity: int,
         idempotency_key: str | None = None,
     ) -> InventoryOp:
-        self._counter += 1
-        if idempotency_key is not None and idempotency_key in self._by_key:
-            existing = self._by_key[idempotency_key]
-            if (
-                existing.sku == sku
-                and existing.operation == operation
-                and existing.quantity == quantity
-            ):
-                return existing
-            raise IdempotencyConflict(
-                f"idempotency key {idempotency_key!r} reused with different params"
-            )
+        tick = self._ledger.next_tick()
+        if idempotency_key is not None:
+            existing = self._ledger.lookup(idempotency_key)
+            if existing is not None:
+                if (
+                    existing.sku == sku
+                    and existing.operation == operation
+                    and existing.quantity == quantity
+                ):
+                    return existing
+                raise IdempotencyConflict(
+                    f"idempotency key {idempotency_key!r} reused with different params"
+                )
 
         op = InventoryOp(
             sku=sku,
             operation=operation,
             quantity=quantity,
             idempotency_key=idempotency_key,
-            committed_tick=self._counter,
-            ledger_sequence=len(self._ledger) + 1,
+            committed_tick=tick,
+            ledger_sequence=self._ledger.size + 1,
         )
-        self._ledger.append(op)
-        if idempotency_key is not None:
-            self._by_key[idempotency_key] = op
+        self._ledger.register(idempotency_key, op)
         return op
 
     def by_idempotency_key(self, idempotency_key: str) -> InventoryOp | None:
-        return self._by_key.get(idempotency_key)
+        return self._ledger.lookup(idempotency_key)
 
     def count(self) -> int:
-        return len(self._ledger)
+        return self._ledger.size

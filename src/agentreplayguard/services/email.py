@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ._common import IdempotencyConflict
+from ._common import IdempotencyConflict, _Ledger
 
 __all__ = ["Email", "IdempotencyConflict", "SimulatedEmailService"]
 
@@ -23,10 +23,8 @@ class SimulatedEmailService:
     """参考实现：内存邮件账本，支持可开关的幂等键。"""
 
     def __init__(self) -> None:
-        self._ledger: list[Email] = []
+        self._ledger: _Ledger[Email] = _Ledger()
         self._by_id: dict[str, Email] = {}
-        self._by_key: dict[str, Email] = {}
-        self._counter = 0
 
     def send(
         self,
@@ -35,38 +33,37 @@ class SimulatedEmailService:
         body: str,
         idempotency_key: str | None = None,
     ) -> Email:
-        self._counter += 1
-        if idempotency_key is not None and idempotency_key in self._by_key:
-            existing = self._by_key[idempotency_key]
-            if (
-                existing.notification_id == notification_id
-                and existing.subject == subject
-                and existing.body == body
-            ):
-                return existing
-            raise IdempotencyConflict(
-                f"idempotency key {idempotency_key!r} reused with different params"
-            )
+        tick = self._ledger.next_tick()
+        if idempotency_key is not None:
+            existing = self._ledger.lookup(idempotency_key)
+            if existing is not None:
+                if (
+                    existing.notification_id == notification_id
+                    and existing.subject == subject
+                    and existing.body == body
+                ):
+                    return existing
+                raise IdempotencyConflict(
+                    f"idempotency key {idempotency_key!r} reused with different params"
+                )
 
         email = Email(
             notification_id=notification_id,
             subject=subject,
             body=body,
             idempotency_key=idempotency_key,
-            committed_tick=self._counter,
-            ledger_sequence=len(self._ledger) + 1,
+            committed_tick=tick,
+            ledger_sequence=self._ledger.size + 1,
         )
-        self._ledger.append(email)
+        self._ledger.register(idempotency_key, email)
         self._by_id[notification_id] = email
-        if idempotency_key is not None:
-            self._by_key[idempotency_key] = email
         return email
 
     def by_notification_id(self, notification_id: str) -> Email | None:
         return self._by_id.get(notification_id)
 
     def by_idempotency_key(self, idempotency_key: str) -> Email | None:
-        return self._by_key.get(idempotency_key)
+        return self._ledger.lookup(idempotency_key)
 
     def count(self) -> int:
-        return len(self._ledger)
+        return self._ledger.size

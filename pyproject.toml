@@ -78,6 +78,7 @@ fail_under = 90
 line-length = 100
 target-version = "py310"
 src = ["src", "tests"]
+extend-exclude = [".pytest_tmp"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]

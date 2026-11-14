@@ -23,9 +23,7 @@ def test_order_lost_ack_detected():
     guard = scenario.guard()
 
     @guard.effect("order", key="order_id", idempotency_key="idempotency_key")
-    def create_order(
-        order_id: str, amount_cents: int, idempotency_key: str | None = None
-    ):
+    def create_order(order_id: str, amount_cents: int, idempotency_key: str | None = None):
         return service.create_order(order_id, amount_cents, idempotency_key)
 
     # 业务侧重试：提交后超时 → 重试

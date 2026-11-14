@@ -85,7 +85,7 @@ def test_special_characters_escaped():
     scenario = Scenario(
         "special",
         seed=0,
-        invariants=[CustomInvariant("bad<&\"", lambda view: False, message="msg <a>&\"b")],
+        invariants=[CustomInvariant('bad<&"', lambda view: False, message='msg <a>&"b')],
     )
     report = scenario.finish()
     assert report.violations  # 有 violation

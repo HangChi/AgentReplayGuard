@@ -94,10 +94,12 @@ tests/
 @pytest.fixture
 def replayguard(request):
     created: list[Scenario] = []
+
     def factory(name, *, seed=0, faults=None, invariants=(), expect_violations=False):
         scenario = Scenario(name, seed=seed, faults=faults, invariants=invariants)
         created.append(scenario)
         return scenario
+
     yield factory
     # teardown: 逐个检查
 ```

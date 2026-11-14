@@ -76,14 +76,17 @@ uv run pytest examples/refund -q
 ```python
 from agentreplayguard import FaultKind, FaultPlan, FaultRule, NoDuplicateEffects
 
+
 # examples/refund/test_refund_idempotent.py 的简化版
 def test_refund_lost_ack(replayguard):
     scenario = replayguard(
         "refund-lost-ack",
         seed=7,
-        faults=FaultPlan([
-            FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
-        ]),
+        faults=FaultPlan(
+            [
+                FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
+            ]
+        ),
         invariants=[NoDuplicateEffects("refund")],
     )
     # 用 scenario.guard().effect(...) 包裹有副作用的工具，跑业务流程……

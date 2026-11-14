@@ -24,6 +24,7 @@
 
 ```python
 from langgraph.checkpoint.memory import InMemorySaver
+
 graph = builder.compile(checkpointer=InMemorySaver())
 ```
 
@@ -41,8 +42,8 @@ from langgraph.types import RetryPolicy
 RetryPolicy(
     max_attempts=3,
     retry_on=(TimeoutError, ConnectionError, ServiceError),
-    initial_interval=0,   # 避免真实等待，保证 <5s
-    jitter=False,         # 避免时间抖动
+    initial_interval=0,  # 避免真实等待，保证 <5s
+    jitter=False,  # 避免时间抖动
 )
 ```
 

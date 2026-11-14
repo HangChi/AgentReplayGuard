@@ -86,9 +86,7 @@ async def _drain(agen):
 
 def test_astream_creates_start_segment():
     scenario = Scenario("s")
-    adapter = LangGraphAdapter(
-        scenario, StreamGraph(chunks=[{"a": {"x": 1}}, {"b": {"x": 2}}])
-    )
+    adapter = LangGraphAdapter(scenario, StreamGraph(chunks=[{"a": {"x": 1}}, {"b": {"x": 2}}]))
 
     chunks = asyncio.run(_drain(adapter.astream({"x": 0})))
 
@@ -178,9 +176,7 @@ def _drain_sync(gen):
 
 def test_stream_creates_start_segment():
     scenario = Scenario("s")
-    adapter = LangGraphAdapter(
-        scenario, StreamGraph(chunks=[{"a": {"x": 1}}, {"b": {"x": 2}}])
-    )
+    adapter = LangGraphAdapter(scenario, StreamGraph(chunks=[{"a": {"x": 1}}, {"b": {"x": 2}}]))
 
     chunks = _drain_sync(adapter.stream({"x": 0}))
 

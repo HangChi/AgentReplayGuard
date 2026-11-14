@@ -94,9 +94,7 @@ def test_stream_body_loss_non_stream_read_also_raises():
 
 def test_stream_body_loss_unclassified_passthrough():
     scenario = make_scenario(stream_loss_rule())
-    transport = FaultyTransport(
-        httpx.MockTransport(ok_handler), scenario, lambda r: None
-    )
+    transport = FaultyTransport(httpx.MockTransport(ok_handler), scenario, lambda r: None)
     client = httpx.Client(transport=transport)
 
     resp = client.get("https://sim.test/health")
@@ -145,9 +143,7 @@ def test_async_stream_body_loss():
     import asyncio
 
     scenario = make_scenario(stream_loss_rule())
-    transport = AsyncFaultyTransport(
-        httpx.MockTransport(ok_handler), scenario, refund_effect
-    )
+    transport = AsyncFaultyTransport(httpx.MockTransport(ok_handler), scenario, refund_effect)
     client = httpx.AsyncClient(transport=transport)
 
     async def run():

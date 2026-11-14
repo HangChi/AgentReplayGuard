@@ -92,8 +92,10 @@ async def main() -> int:
     print(f"\neffect 记账 {'成功' if records else '失败'}")
     print(f"故障注入 {'成功' if injected else '未注入'}")
     if report.ok:
-        print("（本次 agent 未重复调用，未触发 NoDuplicateEffects——真实 LLM 下这是正常的；"
-              "确定性重复检测请用 test_openai_agents_sdk.py 的 ScriptedModel）")
+        print(
+            "（本次 agent 未重复调用，未触发 NoDuplicateEffects——真实 LLM 下这是正常的；"
+            "确定性重复检测请用 test_openai_agents_sdk.py 的 ScriptedModel）"
+        )
     else:
         print("重复副作用已检测到 ✓")
     return 0 if records else 1

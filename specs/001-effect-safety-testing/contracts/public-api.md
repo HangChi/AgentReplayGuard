@@ -126,6 +126,7 @@ class EffectStore:
     def committed_count(self, effect_type: str | None = None) -> int: ...
     def attempts(self, effect_type: str, business_key: str) -> int: ...
 
+
 class EffectView(Protocol):
     @property
     def records(self) -> tuple[EffectRecord, ...]: ...
@@ -150,6 +151,7 @@ class EffectStatus(str, Enum):
     COMMITTED = "committed"
     NOT_COMMITTED = "not_committed"
     UNKNOWN = "unknown"
+
 
 @dataclass(frozen=True)
 class EffectRecord:
@@ -184,6 +186,7 @@ class FaultKind(str, Enum):
     SERVER_ERROR = "server_error"
     PARTIAL_SUCCESS = "partial_success"
 
+
 @dataclass(frozen=True)
 class FaultRule:
     kind: FaultKind
@@ -193,6 +196,7 @@ class FaultRule:
     call_index: int | None = None
     times: int = 1
     probability: float = 1.0
+
 
 class FaultPlan:
     def __init__(self, rules: Sequence[FaultRule] = ()) -> None: ...
@@ -213,13 +217,17 @@ class FaultPlan:
 ```python
 class Invariant(Protocol):
     name: str
+
     def check(self, view: EffectView) -> list[Violation]: ...
+
 
 class NoDuplicateEffects:
     def __init__(self, effect_type: str | None = None) -> None: ...
 
+
 class MaxEffectCount:
     def __init__(self, effect_type: str, max_count: int) -> None: ...
+
 
 class CustomInvariant:
     def __init__(
@@ -229,6 +237,7 @@ class CustomInvariant:
         *,
         message: str = "",
     ) -> None: ...
+
 
 @dataclass(frozen=True)
 class Violation:
@@ -261,6 +270,7 @@ class ScenarioReport:
     run_segments: tuple[RunSegment, ...]
     violations: tuple[Violation, ...]
     warnings: tuple[str, ...]
+
     @property
     def ok(self) -> bool: ...
     def format(self) -> str: ...
@@ -281,6 +291,7 @@ class RunInputKind(str, Enum):
     RESUME = "resume"
     INTERRUPT_RESUME = "interrupt_resume"
 
+
 @dataclass(frozen=True)
 class RunSegment:
     run_id: str
@@ -294,11 +305,13 @@ class RunSegment:
     error_type: str | None
     error_message: str | None
 
+
 @dataclass(frozen=True)
 class GraphRun:
     segment: RunSegment
     output: Mapping[str, Any] | None
     interrupts: tuple[Any, ...]
+
     @property
     def interrupted(self) -> bool: ...
 ```

@@ -41,9 +41,7 @@ class NoDuplicateEffects:
     def __init__(self, effect_type: str | None = None) -> None:
         self.effect_type = effect_type
         self.name = (
-            "no_duplicate_effects"
-            if effect_type is None
-            else f"no_duplicate_effects:{effect_type}"
+            "no_duplicate_effects" if effect_type is None else f"no_duplicate_effects:{effect_type}"
         )
 
     def check(self, view: EffectView) -> list[Violation]:
@@ -62,11 +60,7 @@ class NoDuplicateEffects:
             for idem_hash, hashes in by_idem.items():
                 if len(hashes) > 1:
                     effect_ids = tuple(
-                        sorted(
-                            r.effect_id
-                            for r in group
-                            if r.idempotency_key_hash == idem_hash
-                        )
+                        sorted(r.effect_id for r in group if r.idempotency_key_hash == idem_hash)
                     )
                     violations.append(
                         Violation(
@@ -117,12 +111,7 @@ class MaxEffectCount:
         actual = view.committed_count(self.effect_type)
         if actual <= self.max_count:
             return []
-        effect_ids = tuple(
-            sorted(
-                r.effect_id
-                for r in _committed(view.records, self.effect_type)
-            )
-        )
+        effect_ids = tuple(sorted(r.effect_id for r in _committed(view.records, self.effect_type)))
         return [
             Violation(
                 invariant_name=self.name,
@@ -148,9 +137,7 @@ class ConcurrentCommitDetected:
     def __init__(self, effect_type: str | None = None) -> None:
         self.effect_type = effect_type
         self.name = (
-            "concurrent_commit"
-            if effect_type is None
-            else f"concurrent_commit:{effect_type}"
+            "concurrent_commit" if effect_type is None else f"concurrent_commit:{effect_type}"
         )
 
     def check(self, view: EffectView) -> list[Violation]:

@@ -20,9 +20,7 @@ def build_graph(
     builder = StateGraph(dict)
 
     def do_refund(state: dict) -> dict:
-        idempotency_key = (
-            idempotency_key_factory(state) if idempotency_key_factory else None
-        )
+        idempotency_key = idempotency_key_factory(state) if idempotency_key_factory else None
         refund(state["refund_id"], state["amount_cents"], idempotency_key)
         return dict(state)
 

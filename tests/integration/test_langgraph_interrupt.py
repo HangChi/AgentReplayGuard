@@ -35,9 +35,7 @@ def _build_interrupt_graph(scenario, *, effect_before_interrupt):
 
 
 def test_interrupt_after_effect_resume_duplicates():
-    scenario = Scenario(
-        "interrupt-effect-before", invariants=[NoDuplicateEffects("refund")]
-    )
+    scenario = Scenario("interrupt-effect-before", invariants=[NoDuplicateEffects("refund")])
     adapter = LangGraphAdapter(
         scenario, _build_interrupt_graph(scenario, effect_before_interrupt=True)
     )
@@ -54,9 +52,7 @@ def test_interrupt_after_effect_resume_duplicates():
 
 
 def test_interrupt_before_effect_resume_no_duplicate():
-    scenario = Scenario(
-        "interrupt-effect-after", invariants=[NoDuplicateEffects("refund")]
-    )
+    scenario = Scenario("interrupt-effect-after", invariants=[NoDuplicateEffects("refund")])
     adapter = LangGraphAdapter(
         scenario, _build_interrupt_graph(scenario, effect_before_interrupt=False)
     )
@@ -81,9 +77,7 @@ def test_resume_interrupt_requires_interrupted_run():
     builder.add_node("n", node)
     builder.set_entry_point("n")
     builder.add_edge("n", "__end__")
-    adapter = LangGraphAdapter(
-        scenario, builder.compile(checkpointer=InMemorySaver())
-    )
+    adapter = LangGraphAdapter(scenario, builder.compile(checkpointer=InMemorySaver()))
 
     adapter.invoke({"x": 1})
     with pytest.raises(ScenarioConfigError):

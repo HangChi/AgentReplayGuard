@@ -12,9 +12,11 @@ from agentreplayguard.adapters.requests import RequestsAdapter, HttpEffect
 scenario = Scenario(
     "requests-refund-lost-ack",
     seed=7,
-    faults=FaultPlan([
-        FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
-    ]),
+    faults=FaultPlan(
+        [
+            FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
+        ]
+    ),
     invariants=[NoDuplicateEffects("refund")],
 )
 

@@ -72,9 +72,7 @@ def test_scripted_tool_injects_fault():
     )
     agent = Agent(name="billing", tools=[lookup_order], model=model)
 
-    asyncio.run(
-        Runner.run(agent, "x", run_config=RunConfig(tracing_disabled=True))
-    )
+    asyncio.run(Runner.run(agent, "x", run_config=RunConfig(tracing_disabled=True)))
 
     record = scenario.effects.records[0]
     assert record.status.value == "not_committed"

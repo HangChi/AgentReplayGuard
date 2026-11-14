@@ -12,6 +12,7 @@ from agentreplayguard import NoDuplicateEffects, Scenario
 scenario = Scenario("tools", seed=0, invariants=[NoDuplicateEffects("refund")])
 guard = scenario.guard()
 
+
 @guard.effect("refund", key="refund_id")
 def refund(refund_id: str) -> str:
     return f"refunded {refund_id}"
@@ -25,15 +26,19 @@ def refund(refund_id: str) -> str:
 from agents import Agent, RunConfig, Runner, function_tool
 from agents.testing import ScriptedModel, assistant_message, function_call
 
+
 @function_tool
 @guard.effect("lookup", key="order_id")
 def lookup_order(order_id: str) -> str:
     return f"order {order_id}"
 
-model = ScriptedModel([
-    [function_call("lookup_order", '{"order_id": "ORD-1"}', call_id="c1")],
-    [assistant_message("delivered")],
-])
+
+model = ScriptedModel(
+    [
+        [function_call("lookup_order", '{"order_id": "ORD-1"}', call_id="c1")],
+        [assistant_message("delivered")],
+    ]
+)
 agent = Agent(name="billing", tools=[lookup_order], model=model)
 result = await Runner.run(agent, "...", run_config=RunConfig(tracing_disabled=True))
 ```
@@ -47,10 +52,12 @@ CrewAI 工具可直接调用其 `run()` 接口（无需 Agent/LLM），用 `guar
 ```python
 from crewai.tools import tool
 
+
 @tool
 @guard.effect("search", key="query")
 def search(query: str) -> str:
     return f"results for {query}"
+
 
 # 直接调用（离线，不经过 Agent/LLM）
 search.run(query="hello")

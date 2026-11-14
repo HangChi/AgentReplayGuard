@@ -193,8 +193,7 @@ def test_sync_stream_vs_astream_parity():
 
     def fingerprint(records):
         return sorted(
-            (r.effect_type, r.business_key, r.attempt, r.status.value, r.branch_id)
-            for r in records
+            (r.effect_type, r.business_key, r.attempt, r.status.value, r.branch_id) for r in records
         )
 
     assert fingerprint(stream_records) == fingerprint(astream_records)

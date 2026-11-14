@@ -61,6 +61,7 @@ class _BrokenBodyStream(httpx.SyncByteStream):
         yield b""
         raise httpx.ReadError("stream body lost after headers")
 
+
 resp = httpx.Response(
     status_code=resp.status_code,
     headers=resp.headers,

@@ -111,7 +111,9 @@ class FaultInjector:
         self._remaining = {index: rule.times for index, rule in enumerate(plan.rules)}
         self._call_index = 0
 
-    def next_directive(self, effect_type: str, business_key: str, attempt: int) -> FaultDirective | None:
+    def next_directive(
+        self, effect_type: str, business_key: str, attempt: int
+    ) -> FaultDirective | None:
         self._call_index += 1
         for index, rule in enumerate(self._plan.rules):
             if self._remaining[index] <= 0:

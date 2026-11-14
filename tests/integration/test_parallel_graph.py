@@ -109,7 +109,9 @@ def test_fanout_duplicate_same_key_detected():
 
     report = scenario.finish()
     assert not report.ok
-    violation = next(v for v in report.violations if v.invariant_name == "no_duplicate_effects:refund")
+    violation = next(
+        v for v in report.violations if v.invariant_name == "no_duplicate_effects:refund"
+    )
     assert violation.actual == 2
     # 两条违规 effect 来自不同分支
     records = scenario.effects.records
@@ -125,11 +127,15 @@ def test_fanout_duplicate_same_key_with_idempotency_ok():
     g = StateGraph(State)
 
     def b(s):
-        guard.call("refund", lambda: None, key=lambda _: "ORDER-1", idempotency_key=lambda _: "ik-1")
+        guard.call(
+            "refund", lambda: None, key=lambda _: "ORDER-1", idempotency_key=lambda _: "ik-1"
+        )
         return {"log": ["b"]}
 
     def c(s):
-        guard.call("refund", lambda: None, key=lambda _: "ORDER-1", idempotency_key=lambda _: "ik-1")
+        guard.call(
+            "refund", lambda: None, key=lambda _: "ORDER-1", idempotency_key=lambda _: "ik-1"
+        )
         return {"log": ["c"]}
 
     g.add_node("b", b)

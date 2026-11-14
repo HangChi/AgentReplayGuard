@@ -107,9 +107,7 @@ def test_async_resume_does_not_re_execute_effect_after_checkpoint():
 
 
 def test_async_interrupt_after_effect_resume_duplicates():
-    scenario = Scenario(
-        "async-interrupt-effect-before", invariants=[NoDuplicateEffects("refund")]
-    )
+    scenario = Scenario("async-interrupt-effect-before", invariants=[NoDuplicateEffects("refund")])
     adapter = LangGraphAdapter(
         scenario, _build_interrupt_graph(scenario, effect_before_interrupt=True)
     )
@@ -126,9 +124,7 @@ def test_async_interrupt_after_effect_resume_duplicates():
 
 
 def test_async_interrupt_before_effect_resume_no_duplicate():
-    scenario = Scenario(
-        "async-interrupt-effect-after", invariants=[NoDuplicateEffects("refund")]
-    )
+    scenario = Scenario("async-interrupt-effect-after", invariants=[NoDuplicateEffects("refund")])
     adapter = LangGraphAdapter(
         scenario, _build_interrupt_graph(scenario, effect_before_interrupt=False)
     )

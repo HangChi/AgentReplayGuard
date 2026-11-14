@@ -41,9 +41,11 @@ def test_refund_lost_ack(replayguard):
     scenario = replayguard(
         "refund-lost-ack",
         seed=7,
-        faults=FaultPlan([
-            FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
-        ]),
+        faults=FaultPlan(
+            [
+                FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
+            ]
+        ),
         invariants=[NoDuplicateEffects("refund")],
     )
     # ... 跑业务流程 ...
@@ -69,9 +71,11 @@ from agentreplayguard import FaultKind, FaultPlan, FaultRule, NoDuplicateEffects
 scenario = Scenario(
     "refund-lost-ack",
     seed=7,
-    faults=FaultPlan([
-        FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
-    ]),
+    faults=FaultPlan(
+        [
+            FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
+        ]
+    ),
     invariants=[NoDuplicateEffects("refund")],
 )
 ```
@@ -80,8 +84,7 @@ scenario = Scenario(
 
 ```python
 @scenario.guard().effect("refund", key="refund_id")
-def refund(refund_id: str, amount_cents: int) -> str:
-    ...
+def refund(refund_id: str, amount_cents: int) -> str: ...
 ```
 
 3. 把工具放进 LangGraph 图，显式声明重试策略，用 `LangGraphAdapter` 驱动。
@@ -134,8 +137,9 @@ print(report.format())
 
 ```python
 def test_tool_detects_duplicate(replayguard):
-    scenario = replayguard("meta-check", seed=0, expect_violations=True,
-                           invariants=[NoDuplicateEffects("refund")])
+    scenario = replayguard(
+        "meta-check", seed=0, expect_violations=True, invariants=[NoDuplicateEffects("refund")]
+    )
     # ... 制造重复退款 ...
     # 本测试通过：因为「有违规」正是这里要验证的
 ```
@@ -149,8 +153,8 @@ def test_tool_detects_duplicate(replayguard):
 
 ```python
 @scenario.guard().effect("refund", key="refund_id")
-async def refund(refund_id: str, amount_cents: int) -> str:
-    ...
+async def refund(refund_id: str, amount_cents: int) -> str: ...
+
 
 import asyncio
 
@@ -190,9 +194,11 @@ from agentreplayguard.adapters.httpx import FaultyTransport, HttpEffect
 scenario = Scenario(
     "http-refund-lost-ack",
     seed=7,
-    faults=FaultPlan([
-        FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
-    ]),
+    faults=FaultPlan(
+        [
+            FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
+        ]
+    ),
     invariants=[NoDuplicateEffects("refund")],
 )
 
@@ -221,7 +227,9 @@ from agentreplayguard.adapters.httpx import AsyncFaultyTransport
 
 transport = AsyncFaultyTransport(httpx.MockTransport(handler), scenario, classify)
 async with httpx.AsyncClient(transport=transport) as client:
-    await client.post("https://sim.test/refunds", json={"refund_id": "order-42", "amount_cents": 1000})
+    await client.post(
+        "https://sim.test/refunds", json={"refund_id": "order-42", "amount_cents": 1000}
+    )
 ```
 
 注意：
@@ -243,6 +251,7 @@ async with httpx.AsyncClient(transport=transport) as client:
 import requests
 from agentreplayguard.adapters.requests import RequestsAdapter, HttpEffect
 
+
 def classify(request: requests.PreparedRequest) -> HttpEffect | None:
     if request.method != "POST":
         return None
@@ -253,6 +262,7 @@ def classify(request: requests.PreparedRequest) -> HttpEffect | None:
         params={"amount_cents": body["amount_cents"]},
         idempotency_key=request.headers.get("Idempotency-Key"),
     )
+
 
 adapter = RequestsAdapter(base_adapter, scenario, classify)
 session = requests.Session()
@@ -323,15 +333,18 @@ from agentreplayguard import ConcurrentCommitDetected
 scenario = Scenario("cc", seed=0, invariants=[ConcurrentCommitDetected("refund")])
 guard = scenario.guard()
 
+
 async def refund():
     await asyncio.sleep(0.01)
     return "ok"
+
 
 async def run():
     await asyncio.gather(
         guard.acall("refund", refund, key=lambda a: "ORDER-1"),
         guard.acall("refund", refund, key=lambda a: "ORDER-1"),
     )
+
 
 asyncio.run(run())
 assert not scenario.finish().ok
@@ -397,6 +410,7 @@ from agentreplayguard import NoDuplicateEffects, Scenario
 scenario = Scenario("tools", seed=0, invariants=[NoDuplicateEffects("refund")])
 guard = scenario.guard()
 
+
 @guard.effect("refund", key="refund_id")
 def refund(refund_id: str) -> str:
     return f"refunded {refund_id}"
@@ -409,15 +423,19 @@ OpenAI Agents SDK 用官方 `ScriptedModel` 离线跑工具管线（`@function_t
 from agents import Agent, RunConfig, Runner, function_tool
 from agents.testing import ScriptedModel, assistant_message, function_call
 
+
 @function_tool
 @guard.effect("lookup", key="order_id")
 def lookup_order(order_id: str) -> str:
     return f"order {order_id}"
 
-model = ScriptedModel([
-    [function_call("lookup_order", '{"order_id": "ORD-1"}', call_id="c1")],
-    [assistant_message("delivered")],
-])
+
+model = ScriptedModel(
+    [
+        [function_call("lookup_order", '{"order_id": "ORD-1"}', call_id="c1")],
+        [assistant_message("delivered")],
+    ]
+)
 agent = Agent(name="billing", tools=[lookup_order], model=model)
 result = await Runner.run(agent, "...", run_config=RunConfig(tracing_disabled=True))
 ```
@@ -445,10 +463,11 @@ def test_something(replayguard):
 
 ```python
 report = scenario.finish()
-data = report.to_dict()   # {"scenario_name": ..., "effects": [...], "violations": [...]}
+data = report.to_dict()  # {"scenario_name": ..., "effects": [...], "violations": [...]}
 json_str = report.to_json()  # 确定性 JSON（同 seed 逐字节一致）
 
 import json
+
 json.loads(json_str)["violations"]  # 结构化消费违规信息
 ```
 

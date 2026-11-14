@@ -54,7 +54,6 @@ def classify_or_raise(
         return None
     if not isinstance(effect, HttpEffect):
         raise ScenarioConfigError(
-            "classify must return HttpEffect | None, "
-            f"got {type(effect).__name__}"
+            f"classify must return HttpEffect | None, got {type(effect).__name__}"
         )
     return effect

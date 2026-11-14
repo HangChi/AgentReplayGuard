@@ -12,9 +12,11 @@ from agentreplayguard import NoDuplicateEffects, Scenario
 scenario = Scenario("tools", seed=0, invariants=[NoDuplicateEffects("refund")])
 guard = scenario.guard()
 
+
 @guard.effect("refund", key="refund_id", idempotency_key="idempotency_key")
 def refund(refund_id: str, amount_cents: int, idempotency_key: str | None = None) -> str:
     return f"refunded {refund_id}"
+
 
 refund("R-1", 100)  # 自动记账
 refund("R-1", 100)  # 重复 → NoDuplicateEffects 报违规
@@ -27,6 +29,7 @@ refund("R-1", 100)  # 重复 → NoDuplicateEffects 报违规
 async def refund_async(refund_id: str) -> str:
     return f"refunded {refund_id}"
 
+
 await refund_async("R-2")
 ```
 
@@ -36,14 +39,18 @@ await refund_async("R-2")
 from agents import Agent, RunConfig, Runner
 from agents.testing import ScriptedModel, assistant_message, function_call
 
+
 @guard.effect("lookup", key="order_id")
 def lookup_order(order_id: str) -> str:
     return f"order {order_id}"
 
-model = ScriptedModel([
-    [function_call("lookup_order", '{"order_id": "ORD-1"}', call_id="c1")],
-    [assistant_message("delivered")],
-])
+
+model = ScriptedModel(
+    [
+        [function_call("lookup_order", '{"order_id": "ORD-1"}', call_id="c1")],
+        [assistant_message("delivered")],
+    ]
+)
 agent = Agent(name="billing", tools=[lookup_order], model=model)
 result = await Runner.run(agent, "...", run_config=RunConfig(tracing_disabled=True))
 ```
@@ -57,6 +64,7 @@ result = await Runner.run(agent, "...", run_config=RunConfig(tracing_disabled=Tr
 @tool
 @guard.effect("search", key="query")
 def search(query: str) -> str: ...
+
 
 # AutoGen 工具函数同理
 @guard.effect("notify", key="user_id")

@@ -68,9 +68,7 @@ class LangGraphAdapter:
 
     def resume_interrupt(self, value: Any = None) -> GraphRun:
         if self._last_segment is None or not self._last_segment.interrupted:
-            raise ScenarioConfigError(
-                "resume_interrupt requires a prior interrupted run"
-            )
+            raise ScenarioConfigError("resume_interrupt requires a prior interrupted run")
         self._check_checkpointer()
         return self._run(RunInputKind.INTERRUPT_RESUME, Command(resume=value))
 
@@ -85,9 +83,7 @@ class LangGraphAdapter:
 
     async def aresume_interrupt(self, value: Any = None) -> GraphRun:
         if self._last_segment is None or not self._last_segment.interrupted:
-            raise ScenarioConfigError(
-                "aresume_interrupt requires a prior interrupted run"
-            )
+            raise ScenarioConfigError("aresume_interrupt requires a prior interrupted run")
         self._check_checkpointer()
         return await self._arun(RunInputKind.INTERRUPT_RESUME, Command(resume=value))
 
@@ -101,9 +97,7 @@ class LangGraphAdapter:
     ) -> Iterator[Any]:
         """同步流式驱动图，逐 chunk 产出，effect 正确归属 run/thread/checkpoint/branch。"""
         checkpoint_before = self._checkpoint_id()
-        run_id, started_tick = self._scenario.begin_run(
-            self._thread_id, checkpoint_before
-        )
+        run_id, started_tick = self._scenario.begin_run(self._thread_id, checkpoint_before)
 
         interrupts: list[Any] = []
         exc: BaseException | None = None
@@ -135,9 +129,7 @@ class LangGraphAdapter:
         """流式驱动图，逐 chunk 产出，effect 正确归属 run/thread/checkpoint/branch。"""
         self._ensure_async_capable()
         checkpoint_before = self._checkpoint_id()
-        run_id, started_tick = self._scenario.begin_run(
-            self._thread_id, checkpoint_before
-        )
+        run_id, started_tick = self._scenario.begin_run(self._thread_id, checkpoint_before)
 
         interrupts: list[Any] = []
         exc: BaseException | None = None
@@ -170,9 +162,7 @@ class LangGraphAdapter:
         """流式驱动图的事件流，逐事件产出，effect 正确归属。"""
         self._ensure_async_capable()
         checkpoint_before = self._checkpoint_id()
-        run_id, started_tick = self._scenario.begin_run(
-            self._thread_id, checkpoint_before
-        )
+        run_id, started_tick = self._scenario.begin_run(self._thread_id, checkpoint_before)
 
         interrupts: list[Any] = []
         exc: BaseException | None = None
@@ -222,9 +212,7 @@ class LangGraphAdapter:
 
     def _check_checkpointer(self) -> None:
         if getattr(self._graph, "checkpointer", None) is None:
-            raise UnsupportedGraphError(
-                "graph has no checkpointer; resume requires one"
-            )
+            raise UnsupportedGraphError("graph has no checkpointer; resume requires one")
 
     def _checkpoint_id(self) -> str | None:
         if getattr(self._graph, "checkpointer", None) is None:
@@ -239,9 +227,7 @@ class LangGraphAdapter:
         input: Any,
     ) -> GraphRun:
         checkpoint_before = self._checkpoint_id()
-        run_id, started_tick = self._scenario.begin_run(
-            self._thread_id, checkpoint_before
-        )
+        run_id, started_tick = self._scenario.begin_run(self._thread_id, checkpoint_before)
 
         output: Mapping[str, Any] | None = None
         interrupts: tuple[Any, ...] = ()
@@ -274,9 +260,7 @@ class LangGraphAdapter:
     ) -> GraphRun:
         self._ensure_async_capable()
         checkpoint_before = self._checkpoint_id()
-        run_id, started_tick = self._scenario.begin_run(
-            self._thread_id, checkpoint_before
-        )
+        run_id, started_tick = self._scenario.begin_run(self._thread_id, checkpoint_before)
 
         output: Mapping[str, Any] | None = None
         interrupts: tuple[Any, ...] = ()
@@ -328,9 +312,7 @@ class LangGraphAdapter:
         )
         segment = self._scenario.end_run(segment)
         self._last_segment = segment
-        return GraphRun(
-            segment=segment, output=output, interrupts=tuple(interrupts)
-        )
+        return GraphRun(segment=segment, output=output, interrupts=tuple(interrupts))
 
     @staticmethod
     def _extract_interrupts(output: Mapping[str, Any] | None) -> tuple[Any, ...]:

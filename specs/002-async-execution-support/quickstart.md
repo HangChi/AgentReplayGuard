@@ -66,15 +66,19 @@ from agentreplayguard import FaultKind, FaultPlan, FaultRule, NoDuplicateEffects
 scenario = Scenario(
     "async-refund-lost-ack",
     seed=7,
-    faults=FaultPlan([
-        FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
-    ]),
+    faults=FaultPlan(
+        [
+            FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
+        ]
+    ),
     invariants=[NoDuplicateEffects("refund")],
 )
+
 
 @scenario.guard().effect("refund", key="refund_id")
 async def refund(refund_id: str, amount_cents: int) -> str:
     return "ok"
+
 
 async def main() -> None:
     for _ in range(2):
@@ -85,6 +89,7 @@ async def main() -> None:
     report = scenario.finish()
     assert not report.ok
     print(report.format())
+
 
 asyncio.run(main())
 ```

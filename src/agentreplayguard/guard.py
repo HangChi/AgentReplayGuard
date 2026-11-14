@@ -140,9 +140,7 @@ class EffectGuard:
         idempotency_key: str | Callable[[Mapping[str, Any]], str | None] | None = None,
         **kwargs: Any,
     ) -> T:
-        return self._guarded_call(
-            effect_type, fn, args, kwargs, key, params, idempotency_key
-        )
+        return self._guarded_call(effect_type, fn, args, kwargs, key, params, idempotency_key)
 
     async def acall(
         self,

@@ -46,9 +46,7 @@ def test_interrupt_after_effect_duplicates():
 
 
 def test_interrupt_before_effect_no_duplicate():
-    scenario = Scenario(
-        "refund-interrupt-after", seed=0, invariants=[NoDuplicateEffects("refund")]
-    )
+    scenario = Scenario("refund-interrupt-after", seed=0, invariants=[NoDuplicateEffects("refund")])
     refund, _notify, service = make_tools(scenario)
     graph = _build_interrupt_graph(refund, effect_before_interrupt=False)
     adapter = LangGraphAdapter(scenario, graph)

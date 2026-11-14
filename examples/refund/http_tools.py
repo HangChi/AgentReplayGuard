@@ -62,9 +62,7 @@ def make_sync_client(scenario: Scenario, service: RefundService) -> httpx.Client
 
 
 def make_async_client(scenario: Scenario, service: RefundService) -> httpx.AsyncClient:
-    transport = AsyncFaultyTransport(
-        httpx.MockTransport(service.handle), scenario, classify_refund
-    )
+    transport = AsyncFaultyTransport(httpx.MockTransport(service.handle), scenario, classify_refund)
     return httpx.AsyncClient(transport=transport)
 
 

@@ -120,9 +120,7 @@ def test_connection_reset_raises_connection_error():
     sc = Scenario(
         "s",
         seed=0,
-        faults=FaultPlan(
-            [FaultRule(FaultKind.CONNECTION_RESET, effect_type="refund", attempt=1)]
-        ),
+        faults=FaultPlan([FaultRule(FaultKind.CONNECTION_RESET, effect_type="refund", attempt=1)]),
     )
     session, base, _ = _session_with(sc, _refund_effect)
     with pytest.raises(requests.exceptions.ConnectionError):
@@ -134,9 +132,7 @@ def test_server_error_raises_http_error():
     sc = Scenario(
         "s",
         seed=0,
-        faults=FaultPlan(
-            [FaultRule(FaultKind.SERVER_ERROR, effect_type="refund", attempt=1)]
-        ),
+        faults=FaultPlan([FaultRule(FaultKind.SERVER_ERROR, effect_type="refund", attempt=1)]),
     )
     session, base, _ = _session_with(sc, _refund_effect)
     with pytest.raises(requests.exceptions.HTTPError):
@@ -148,9 +144,7 @@ def test_partial_success_raises_chunked_encoding_error():
     sc = Scenario(
         "s",
         seed=0,
-        faults=FaultPlan(
-            [FaultRule(FaultKind.PARTIAL_SUCCESS, effect_type="refund", attempt=1)]
-        ),
+        faults=FaultPlan([FaultRule(FaultKind.PARTIAL_SUCCESS, effect_type="refund", attempt=1)]),
     )
     session, _base, _ = _session_with(sc, _refund_effect)
     with pytest.raises(requests.exceptions.ChunkedEncodingError):
@@ -161,9 +155,7 @@ def test_stream_body_loss_stream_read_raises_and_records_committed():
     sc = Scenario(
         "s",
         seed=0,
-        faults=FaultPlan(
-            [FaultRule(FaultKind.STREAM_BODY_LOSS, effect_type="refund", attempt=1)]
-        ),
+        faults=FaultPlan([FaultRule(FaultKind.STREAM_BODY_LOSS, effect_type="refund", attempt=1)]),
     )
     session, base, _ = _session_with(sc, _refund_effect)
 
@@ -184,9 +176,7 @@ def test_stream_body_loss_non_stream_read_also_raises():
     sc = Scenario(
         "s",
         seed=0,
-        faults=FaultPlan(
-            [FaultRule(FaultKind.STREAM_BODY_LOSS, effect_type="refund", attempt=1)]
-        ),
+        faults=FaultPlan([FaultRule(FaultKind.STREAM_BODY_LOSS, effect_type="refund", attempt=1)]),
     )
     session, _base, _ = _session_with(sc, _refund_effect)
     with pytest.raises(requests.exceptions.ChunkedEncodingError):
@@ -206,9 +196,7 @@ def test_stream_body_loss_idempotency_folds():
     sc = Scenario(
         "s",
         seed=0,
-        faults=FaultPlan(
-            [FaultRule(FaultKind.STREAM_BODY_LOSS, effect_type="refund", attempt=1)]
-        ),
+        faults=FaultPlan([FaultRule(FaultKind.STREAM_BODY_LOSS, effect_type="refund", attempt=1)]),
         invariants=[NoDuplicateEffects("refund")],
     )
     session, _base, _ = _session_with(sc, refund_effect_with_ik)

@@ -90,14 +90,18 @@ from agentreplayguard.adapters.httpx import FaultyTransport, HttpEffect
 scenario = Scenario(
     "http-refund-lost-ack",
     seed=7,
-    faults=FaultPlan([
-        FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
-    ]),
+    faults=FaultPlan(
+        [
+            FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1),
+        ]
+    ),
     invariants=[NoDuplicateEffects("refund")],
 )
 
+
 def serve(request: httpx.Request) -> httpx.Response:
     return httpx.Response(200, json={"ok": True}, request=request)
+
 
 def classify(request: httpx.Request) -> HttpEffect | None:
     if request.method != "POST" or not request.url.path.endswith("/refunds"):
@@ -109,6 +113,7 @@ def classify(request: httpx.Request) -> HttpEffect | None:
         params={"amount_cents": body["amount_cents"]},
         idempotency_key=request.headers.get("Idempotency-Key"),
     )
+
 
 transport = FaultyTransport(httpx.MockTransport(serve), scenario, classify)
 with httpx.Client(transport=transport) as client:

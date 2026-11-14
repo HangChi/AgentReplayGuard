@@ -25,6 +25,8 @@ class BrokenStream(SyncByteStream):
     def __iter__(self):
         yield b"partial"
         raise httpx.ReadError("body lost after headers")
+
+
 resp = httpx.Response(200, content=BrokenStream())
 resp.read()  # → httpx.ReadError
 ```

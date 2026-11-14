@@ -99,8 +99,15 @@ async def astream(self, input, **kwargs):
         exc = caught
         raise
     finally:
-        self._finish_run(run_id=run_id, input_kind=START, checkpoint_before=checkpoint_before,
-                         started_tick=started_tick, output=None, interrupts=(), exc=exc)
+        self._finish_run(
+            run_id=run_id,
+            input_kind=START,
+            checkpoint_before=checkpoint_before,
+            started_tick=started_tick,
+            output=None,
+            interrupts=(),
+            exc=exc,
+        )
 ```
 
 关键点：

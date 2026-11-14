@@ -140,9 +140,7 @@ class RequestsAdapter(BaseAdapter):
                 idempotency_key=lambda _args: effect.idempotency_key,
             )
         except Exception as exc:
-            mapped = _map_injected_fault(
-                _new_record(self._scenario, records_before), request
-            )
+            mapped = _map_injected_fault(_new_record(self._scenario, records_before), request)
             if mapped is None:
                 raise
             raise mapped from exc

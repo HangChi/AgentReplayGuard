@@ -116,17 +116,20 @@ import pytest
 from agentreplayguard import FaultKind, FaultPlan, FaultRule, NoDuplicateEffects
 from agentreplayguard.adapters.langgraph import LangGraphAdapter
 
+
 def test_lost_ack_detects_duplicate(replayguard, refund_scenario):
     scenario = replayguard(
         "refund-lost-ack",
         seed=7,
-        faults=FaultPlan([
-            FaultRule(
-                kind=FaultKind.TIMEOUT_AFTER_COMMIT,
-                effect_type="refund",
-                attempt=1,
-            )
-        ]),
+        faults=FaultPlan(
+            [
+                FaultRule(
+                    kind=FaultKind.TIMEOUT_AFTER_COMMIT,
+                    effect_type="refund",
+                    attempt=1,
+                )
+            ]
+        ),
         invariants=[NoDuplicateEffects("refund")],
     )
     graph = build_refund_graph(scenario)  # 节点中的工具用 scenario.guard() 包装

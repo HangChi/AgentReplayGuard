@@ -49,8 +49,7 @@ def make_graph(scenario: Scenario):
     return g.compile()
 
 
-scenario = Scenario("parallel-duplicate-refund", seed=0,
-                    invariants=[NoDuplicateEffects("refund")])
+scenario = Scenario("parallel-duplicate-refund", seed=0, invariants=[NoDuplicateEffects("refund")])
 adapter = LangGraphAdapter(scenario, make_graph(scenario))
 adapter.invoke({"log": []})
 

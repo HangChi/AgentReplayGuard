@@ -31,9 +31,7 @@ def _attempts_when_raising(retry_policy: RetryPolicy) -> int:
 
 
 def test_default_retry_on_does_not_retry_oserror():
-    attempts = _attempts_when_raising(
-        RetryPolicy(max_attempts=3, initial_interval=0, jitter=False)
-    )
+    attempts = _attempts_when_raising(RetryPolicy(max_attempts=3, initial_interval=0, jitter=False))
     assert attempts == 1
 
 

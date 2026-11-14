@@ -22,9 +22,11 @@
 ```python
 def test_forgot_finish(replayguard):
     scenario = replayguard(
-        "forgot-finish", seed=0,
-        faults=FaultPlan([FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT,
-                                    effect_type="refund", attempt=1)]),
+        "forgot-finish",
+        seed=0,
+        faults=FaultPlan(
+            [FaultRule(FaultKind.TIMEOUT_AFTER_COMMIT, effect_type="refund", attempt=1)]
+        ),
         invariants=[NoDuplicateEffects("refund")],
     )
     guard = scenario.guard()

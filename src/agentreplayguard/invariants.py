@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import Any, Protocol
 
 from .effects import EffectRecord, EffectStatus, EffectView, commit_identity
@@ -180,15 +181,19 @@ class ConcurrentCommitDetected:
 
 
 def _any_overlap(group: list[EffectRecord]) -> bool:
-    """组内是否存在区间重叠的任意两条 COMMITTED 记录。"""
-    for i in range(len(group)):
-        for j in range(i + 1, len(group)):
-            a = group[i]
-            b = group[j]
-            if a.ended_tick is None or b.ended_tick is None:
-                continue
-            if a.started_tick < b.ended_tick and b.started_tick < a.ended_tick:
-                return True
+    """组内是否存在区间重叠的任意两条 COMMITTED 记录。
+
+    按 started_tick 排序后检查相邻对（O(n log n)）：两条区间相交当且仅当
+    排序序列中存在一对相邻记录相交（经典扫描性质），对每对仍用与双重循环
+    完全一致的判定，保证语义不变。
+    """
+    finite = [r for r in group if r.ended_tick is not None]
+    if len(finite) < 2:
+        return False
+    finite.sort(key=lambda r: r.started_tick)
+    for a, b in pairwise(finite):
+        if a.started_tick < b.ended_tick and b.started_tick < a.ended_tick:
+            return True
     return False
 
 

@@ -83,3 +83,73 @@ def test_concurrent_overlap_via_ticks():
     asyncio.run(run())
     report = sc.finish()
     assert not report.ok
+
+
+def test_any_overlap_sorted_scan_detects_non_adjacent_overlap():
+    """排序扫描的完备性回归：重叠可能发生在非相邻（按 started 排序）记录之间。"""
+    from agentreplayguard.invariants import _any_overlap
+
+    def record(effect_id, started, ended):
+        from agentreplayguard import EffectStatus
+        from agentreplayguard.effects import EffectRecord
+
+        return EffectRecord(
+            effect_id=effect_id,
+            sequence=0,
+            effect_type="refund",
+            business_key="R-1",
+            params_hash="h",
+            idempotency_key_hash=None,
+            attempt=1,
+            status=EffectStatus.COMMITTED,
+            fault=None,
+            error_type=None,
+            error_message=None,
+            run_id=None,
+            thread_id=None,
+            checkpoint_id=None,
+            started_tick=started,
+            ended_tick=ended,
+        )
+
+    # A=[0,10) B=[10,20) C=[5,15) D=[25,30)
+    # C 与 A、B 都重叠；D 与任何记录都不重叠。
+    group = [
+        record("d", 25, 30),
+        record("a", 0, 10),
+        record("b", 10, 20),
+        record("c", 5, 15),
+    ]
+    assert _any_overlap(group)
+
+
+def test_any_overlap_sorted_scan_no_false_positive():
+    """排序扫描不误报：两两相接但不重叠的区间。"""
+    from agentreplayguard.invariants import _any_overlap
+
+    def record(effect_id, started, ended):
+        from agentreplayguard import EffectStatus
+        from agentreplayguard.effects import EffectRecord
+
+        return EffectRecord(
+            effect_id=effect_id,
+            sequence=0,
+            effect_type="refund",
+            business_key="R-1",
+            params_hash="h",
+            idempotency_key_hash=None,
+            attempt=1,
+            status=EffectStatus.COMMITTED,
+            fault=None,
+            error_type=None,
+            error_message=None,
+            run_id=None,
+            thread_id=None,
+            checkpoint_id=None,
+            started_tick=started,
+            ended_tick=ended,
+        )
+
+    # A=[0,10) B=[10,20) C=[20,30)：相接不重叠，不报
+    group = [record("a", 0, 10), record("b", 10, 20), record("c", 20, 30)]
+    assert not _any_overlap(group)

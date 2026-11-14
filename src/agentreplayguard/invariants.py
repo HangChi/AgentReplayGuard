@@ -192,6 +192,8 @@ def _any_overlap(group: list[EffectRecord]) -> bool:
         return False
     finite.sort(key=lambda r: r.started_tick)
     for a, b in pairwise(finite):
+        # ended_tick 已在上方过滤为 int；mypy 对列表推导不做类型收窄，此处显式断言。
+        assert a.ended_tick is not None and b.ended_tick is not None
         if a.started_tick < b.ended_tick and b.started_tick < a.ended_tick:
             return True
     return False

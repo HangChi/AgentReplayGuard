@@ -5,7 +5,7 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [0.14.0] - 2026-11-14
 
 ### Fixed
 
@@ -17,6 +17,9 @@
   响应头正常返回，body 读取时才抛 `ChunkedEncodingError`（与 httpx 适配器语义一致）。
 - 副作用异常现在附带排障上下文：`effect` / `key` / `attempt` / `run` / `thread` /
   `checkpoint`（Python 3.11+ 以 `add_note` 附加，3.10 静默跳过）。
+- `_any_overlap` 排序扫描补 `ended_tick` 类型收窄：mypy 无法从列表推导的 `is not
+  None` 过滤推断出 `ended_tick` 为 int，显式 `assert` 收窄，消除 `Unsupported
+  operand types for <` 报错。
 
 ### Changed
 
@@ -197,7 +200,8 @@
 - LangGraph Adapter：驱动 RetryPolicy、Checkpoint 恢复与 Interrupt 重放。
 - 退款完整示例与 Quickstart 文档。
 
-[Unreleased]: https://github.com/HangChi/AgentReplayGuard/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/HangChi/AgentReplayGuard/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/HangChi/AgentReplayGuard/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/HangChi/AgentReplayGuard/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/HangChi/AgentReplayGuard/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/HangChi/AgentReplayGuard/compare/v0.10.0...v0.11.0

@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Iterator, Mapping
+from collections.abc import AsyncIterator, Iterator, Mapping, Sequence
 from typing import Any, cast
 
 from langgraph.types import Command
@@ -49,7 +49,7 @@ class LangGraphAdapter:
         self._last_segment: RunSegment | None = None
 
         # 注入分支归属解析器：读 LangGraph 节点名（不在上下文时 None）
-        scenario._set_branch_resolver(_langgraph_node)
+        scenario.set_branch_resolver(_langgraph_node)
 
         self._validate_graph()
 
@@ -101,14 +101,15 @@ class LangGraphAdapter:
     ) -> Iterator[Any]:
         """同步流式驱动图，逐 chunk 产出，effect 正确归属 run/thread/checkpoint/branch。"""
         checkpoint_before = self._checkpoint_id()
-        run_id = self._scenario._begin_run(self._thread_id, checkpoint_before)
-        started_tick = self._scenario._tick()
+        run_id, started_tick = self._scenario.begin_run(
+            self._thread_id, checkpoint_before
+        )
 
-        interrupts: tuple[Any, ...] = ()
+        interrupts: list[Any] = []
         exc: BaseException | None = None
         try:
             for chunk in self._graph.stream(input, self._config(), **kwargs):
-                interrupts = interrupts + self._extract_interrupts_from_chunk(chunk)
+                interrupts.extend(self._extract_interrupts_from_chunk(chunk))
                 yield chunk
         except BaseException as caught:
             # GeneratorExit 是提前退出（break），属正常收尾，不记为错误。
@@ -134,14 +135,15 @@ class LangGraphAdapter:
         """流式驱动图，逐 chunk 产出，effect 正确归属 run/thread/checkpoint/branch。"""
         self._ensure_async_capable()
         checkpoint_before = self._checkpoint_id()
-        run_id = self._scenario._begin_run(self._thread_id, checkpoint_before)
-        started_tick = self._scenario._tick()
+        run_id, started_tick = self._scenario.begin_run(
+            self._thread_id, checkpoint_before
+        )
 
-        interrupts: tuple[Any, ...] = ()
+        interrupts: list[Any] = []
         exc: BaseException | None = None
         try:
             async for chunk in self._graph.astream(input, self._config(), **kwargs):
-                interrupts = interrupts + self._extract_interrupts_from_chunk(chunk)
+                interrupts.extend(self._extract_interrupts_from_chunk(chunk))
                 yield chunk
         except BaseException as caught:
             # GeneratorExit / asyncio.CancelledError 是提前退出（break / 外部取消），
@@ -168,14 +170,15 @@ class LangGraphAdapter:
         """流式驱动图的事件流，逐事件产出，effect 正确归属。"""
         self._ensure_async_capable()
         checkpoint_before = self._checkpoint_id()
-        run_id = self._scenario._begin_run(self._thread_id, checkpoint_before)
-        started_tick = self._scenario._tick()
+        run_id, started_tick = self._scenario.begin_run(
+            self._thread_id, checkpoint_before
+        )
 
-        interrupts: tuple[Any, ...] = ()
+        interrupts: list[Any] = []
         exc: BaseException | None = None
         try:
             async for event in self._graph.astream_events(input, self._config(), **kwargs):
-                interrupts = interrupts + self._extract_interrupts_from_chunk(event)
+                interrupts.extend(self._extract_interrupts_from_chunk(event))
                 yield event
         except BaseException as caught:
             if not isinstance(caught, (GeneratorExit, asyncio.CancelledError)):
@@ -203,7 +206,7 @@ class LangGraphAdapter:
                 raise UnsupportedGraphError(f"graph is missing {method}()")
         fanout = self._find_fanout()
         if fanout and not self._strict_graph:
-            self._scenario._warn("strict_graph=False; parallel fan-out check skipped")
+            self._scenario.warn("strict_graph=False; parallel fan-out check skipped")
 
     def _ensure_async_capable(self) -> None:
         if not callable(getattr(self._graph, "ainvoke", None)):
@@ -236,8 +239,9 @@ class LangGraphAdapter:
         input: Any,
     ) -> GraphRun:
         checkpoint_before = self._checkpoint_id()
-        run_id = self._scenario._begin_run(self._thread_id, checkpoint_before)
-        started_tick = self._scenario._tick()
+        run_id, started_tick = self._scenario.begin_run(
+            self._thread_id, checkpoint_before
+        )
 
         output: Mapping[str, Any] | None = None
         interrupts: tuple[Any, ...] = ()
@@ -270,8 +274,9 @@ class LangGraphAdapter:
     ) -> GraphRun:
         self._ensure_async_capable()
         checkpoint_before = self._checkpoint_id()
-        run_id = self._scenario._begin_run(self._thread_id, checkpoint_before)
-        started_tick = self._scenario._tick()
+        run_id, started_tick = self._scenario.begin_run(
+            self._thread_id, checkpoint_before
+        )
 
         output: Mapping[str, Any] | None = None
         interrupts: tuple[Any, ...] = ()
@@ -305,7 +310,7 @@ class LangGraphAdapter:
         checkpoint_before: str | None,
         started_tick: int,
         output: Mapping[str, Any] | None,
-        interrupts: tuple[Any, ...],
+        interrupts: Sequence[Any],
         exc: BaseException | None,
     ) -> GraphRun:
         checkpoint_after = self._checkpoint_id()
@@ -316,15 +321,16 @@ class LangGraphAdapter:
             checkpoint_before=checkpoint_before,
             checkpoint_after=checkpoint_after,
             started_tick=started_tick,
-            ended_tick=self._scenario._tick(),
+            ended_tick=0,
             interrupted=bool(interrupts),
             error_type=type(exc).__name__ if exc is not None else None,
             error_message=str(exc) if exc is not None else None,
         )
-        self._scenario._add_run_segment(segment)
-        self._scenario._end_run()
+        segment = self._scenario.end_run(segment)
         self._last_segment = segment
-        return GraphRun(segment=segment, output=output, interrupts=interrupts)
+        return GraphRun(
+            segment=segment, output=output, interrupts=tuple(interrupts)
+        )
 
     @staticmethod
     def _extract_interrupts(output: Mapping[str, Any] | None) -> tuple[Any, ...]:

@@ -5,8 +5,8 @@ from agentreplayguard import Scenario
 
 def _scenario_with_resolver(resolver):
     sc = Scenario("t", seed=0)
-    # 通过内部接口注入 branch resolver（适配器层使用同一入口）
-    sc._set_branch_resolver(resolver)
+    # 通过公开接口注入 branch resolver（适配器层使用同一入口）
+    sc.set_branch_resolver(resolver)
     return sc
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 from enum import Enum
 
 from .clock import LogicalClock, counter_id
@@ -121,31 +122,38 @@ class Scenario:
     def _current_run_context(self) -> tuple[str | None, str | None, str | None]:
         return (self._run_id, self._thread_id, self._checkpoint_id)
 
-    def _begin_run(self, thread_id: str, checkpoint_id: str | None) -> str:
+    # 公开运行期接口（供 LangGraphAdapter 等外部驱动方使用）
+    def begin_run(self, thread_id: str, checkpoint_id: str | None) -> tuple[str, int]:
+        """开启一次 run：登记 run_id/thread/checkpoint 并推进逻辑时钟。
+
+        返回 (run_id, started_tick)，二者都用于后续构造 RunSegment。
+        """
         self._run_counter += 1
         run_id = counter_id("run", self._run_counter, 4)
         self._run_id = run_id
         self._thread_id = thread_id
         self._checkpoint_id = checkpoint_id
-        return run_id
+        return run_id, self._clock.tick()
 
-    def _end_run(self) -> None:
+    def end_run(self, segment: RunSegment) -> RunSegment:
+        """收尾一次 run：补全 ended_tick、登记 segment 并清理 run 上下文。
+
+        返回补全后的 RunSegment（入参的 ended_tick 会被覆盖）。
+        """
+        segment = replace(segment, ended_tick=self._clock.tick())
+        self._run_segments.append(segment)
         self._run_id = None
         self._thread_id = None
         self._checkpoint_id = None
+        return segment
 
-    def _add_run_segment(self, segment: RunSegment) -> None:
-        self._run_segments.append(segment)
-
-    def _tick(self) -> int:
-        return self._clock.tick()
-
-    def _warn(self, message: str) -> None:
-        self._extra_warnings.append(message)
-
-    def _set_branch_resolver(self, resolver: Callable[[], str | None]) -> None:
-        """注入分支归属解析器（仅供适配器层使用）。"""
+    def set_branch_resolver(self, resolver: Callable[[], str | None]) -> None:
+        """注入分支归属解析器（适配器层使用）。"""
         self._branch_resolver = resolver
+
+    def warn(self, message: str) -> None:
+        """追加一条场景级警告（进入报告 warnings）。"""
+        self._extra_warnings.append(message)
 
     def _resolve_branch(self) -> str | None:
         return self._branch_resolver()

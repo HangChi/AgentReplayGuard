@@ -20,8 +20,8 @@ def add_committed():
         attempt: int = 1,
     ) -> EffectRecord:
         record = EffectRecord(
-            effect_id=store._next_effect_id(),
-            sequence=store._next_sequence(),
+            effect_id="",
+            sequence=0,
             effect_type=effect_type,
             business_key=business_key,
             params_hash=params_hash,
@@ -37,7 +37,7 @@ def add_committed():
             started_tick=0,
             ended_tick=1,
         )
-        store._append(record)
+        store.append(record)
         return record
 
     return _add

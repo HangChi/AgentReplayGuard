@@ -8,10 +8,10 @@ from agentreplayguard.invariants import NoDuplicateEffects
 
 
 def _add(store, *, branch_id, params_hash="h", idem=None):
-    store._append(
+    store.append(
         __import__("agentreplayguard").effects.EffectRecord(
-            effect_id=store._next_effect_id(),
-            sequence=store._next_sequence(),
+            effect_id="",
+            sequence=0,
             effect_type="refund",
             business_key="R-1",
             params_hash=params_hash,

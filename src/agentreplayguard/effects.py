@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Protocol, runtime_checkable
 
@@ -96,19 +96,25 @@ class EffectStore:
     def attempts(self, effect_type: str, business_key: str) -> int:
         return self._attempts.get((effect_type, business_key), 0)
 
-    # 内部写入接口（仅供 EffectGuard 使用，不作为公开 API）
-    def _next_attempt(self, effect_type: str, business_key: str) -> int:
+    # 公开记账接口（供 EffectGuard 与适配器/测试使用；identity 由账本统一分配）
+    def next_attempt(self, effect_type: str, business_key: str) -> int:
+        """登记一次新的尝试，返回递增后的 attempt 序号（从 1 起）。"""
         key = (effect_type, business_key)
         self._attempts[key] = self._attempts.get(key, 0) + 1
         return self._attempts[key]
 
-    def _next_sequence(self) -> int:
-        self._sequence += 1
-        return self._sequence
+    def append(self, record: EffectRecord) -> EffectRecord:
+        """追加一条 effect 记录并分配 effect_id / sequence。
 
-    def _next_effect_id(self) -> str:
+        入参的 ``effect_id`` 与 ``sequence`` 视为占位值（请传空串与 0），
+        由账本在此统一分配，保证 identity 口径一致；返回补全后的正式记录。
+        """
         self._effect_counter += 1
-        return counter_id("eff", self._effect_counter, 6)
-
-    def _append(self, record: EffectRecord) -> None:
+        self._sequence += 1
+        record = replace(
+            record,
+            effect_id=counter_id("eff", self._effect_counter, 6),
+            sequence=self._sequence,
+        )
         self._records.append(record)
+        return record
